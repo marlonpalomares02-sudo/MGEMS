@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weeb Assistant</title>
+    <title>M'GEMS Interview Buddy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,12 +14,20 @@
     </div>
 
     <div class="top-bar">
-        <h1>Weeb Assistant</h1>
+        <div class="app-header">
+            <h1>M'GEMS Interview Buddy</h1>
+            <p class="tagline">Your Smart Interview Buddy</p>
+        </div>
         <div class="controls">
             <button id="create-meeting-btn">Create Meeting</button>
             <button id="api-config-btn">API Config</button>
             <button id="debug-settings-btn">Debug</button>
             <button id="theme-toggle">Theme</button>
+            <button id="pip-icon-btn" class="pip-icon-btn" title="Toggle PIP Mode">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H5v-4h4v4zm0-6H5V7h4v4zm6 6h-4v-4h4v4zm0-6h-4V7h4v4zm6 6h-4v-4h4v4zm0-6h-4V7h4v4z"/>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -56,6 +64,7 @@
             <button id="practice-mode-btn">Toggle Practice Mode</button>
             <button id="start-practice-btn">Start Practice</button>
             <button id="record-answer-btn">Record Answer</button>
+            <button id="test-pip-btn" style="background: #4da6ff; color: white; margin-left: 10px;">Test PIP Readability</button>
             <div id="practice-feedback"></div>
         </section>
     </main>
@@ -114,7 +123,27 @@
             <button id="pip-resize-btn">[]</button>
             <button id="pip-close-btn">X</button>
         </div>
-        <div id="pip-content"></div>
+        <div id="pip-content">
+            <div class="pip-transcription-container">
+                <div class="pip-transcription-text"></div>
+            </div>
+            <div class="pip-ai-container">
+                <div class="pip-ai-header">AI Assistant</div>
+                <div class="pip-ai-content"></div>
+            </div>
+        </div>
+        <!-- Resize handles -->
+        <div class="resize-handle resize-nw"></div>
+        <div class="resize-handle resize-ne"></div>
+        <div class="resize-handle resize-sw"></div>
+        <div class="resize-handle resize-se"></div>
+        <div class="resize-handle resize-n"></div>
+        <div class="resize-handle resize-s"></div>
+        <div class="resize-handle resize-w"></div>
+        <div class="resize-handle resize-e"></div>
+        
+        <!-- Resize indicator -->
+        <div class="resize-indicator"></div>
     </div>
 
     <!-- Deepgram SDK fallback (primary and only source) -->

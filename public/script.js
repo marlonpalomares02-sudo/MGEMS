@@ -1,5 +1,5 @@
 /**
- * Weeb Assistant Frontend Application
+ * M'GEMS Interview Buddy Frontend Application
  * Handles UI interactions, state management, and real-time communication
  */
 
@@ -14,6 +14,7 @@ class WeebAssistantUI {
       deepseekBaseUrl: 'https://api.deepseek.com/v1',
       geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
     };
+    
     this.state = {
       isRecording: false,
       isTranscribing: false,
@@ -29,7 +30,14 @@ class WeebAssistantUI {
       screenAudioContext: null,
       screenAudioProcessor: null,
       deepgramSocket: null,
-      audioWorkletLoaded: false
+      audioWorkletLoaded: false,
+      currentPlatform: null,
+      detectedPlatforms: [],
+      platformIntegration: {
+        zoom: { detected: false, meetingId: null, meetingTitle: null },
+        googleMeet: { detected: false, meetingUrl: null, meetingTitle: null },
+        teams: { detected: false, meetingId: null, meetingTitle: null }
+      }
     };
     this.elements = {};
     this.pipState = {
@@ -38,7 +46,43 @@ class WeebAssistantUI {
       dragOffset: { x: 0, y: 0 },
       resizeStart: { x: 0, y: 0, width: 0, height: 0 }
     };
+    
     this.init();
+  }
+
+  clearPipTranscription() {
+    const pipText = this.elements.pipOverlay.querySelector('.pip-transcription-text');
+    if (pipText) {
+      pipText.textContent = '';
+      pipText.dataset.timestamp = '';
+    }
+  }
+
+  clearPipAI() {
+    const pipAIContent = this.elements.pipOverlay.querySelector('.pip-ai-content');
+    if (pipAIContent) {
+      pipAIContent.textContent = '';
+      pipAIContent.dataset.timestamp = '';
+    }
+  }
+
+  setupPipAutoCleanup() {
+    // Check every minute for content older than 30 minutes
+    setInterval(() => {
+      const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+      
+      // Check transcription
+      const pipText = this.elements.pipOverlay.querySelector('.pip-transcription-text');
+      if (pipText && pipText.dataset.timestamp && parseInt(pipText.dataset.timestamp) < thirtyMinutesAgo) {
+        this.clearPipTranscription();
+      }
+      
+      // Check AI content
+      const pipAIContent = this.elements.pipOverlay.querySelector('.pip-ai-content');
+      if (pipAIContent && pipAIContent.dataset.timestamp && parseInt(pipAIContent.dataset.timestamp) < thirtyMinutesAgo) {
+        this.clearPipAI();
+      }
+    }, 60000); // Check every minute
   }
 
   init() {
@@ -52,6 +96,12 @@ class WeebAssistantUI {
     this.loadTheme();
     this.hideLoading(); // Hide loading overlay after initialization
     
+    // Start auto-deletion timer for old transcriptions and AI answers (every 3 minutes)
+    this.startAutoDeletionTimer();
+    
+    // Start platform detection for interview platforms
+    this.startPlatformDetection();
+    
     // Show API configuration reminder if no keys are configured
     setTimeout(() => {
       const hasAnyApiKey = this.config.deepseekApiKey || this.config.deepgramApiKey || this.config.geminiApiKey;
@@ -64,7 +114,71 @@ class WeebAssistantUI {
       }
     }, 1000);
     
-    console.log('🌸 Weeb Assistant UI initialized');
+    console.log('🌸 M\'GEMS Interview Buddy UI initialized');
+  }
+
+  startAutoDeletionTimer() {
+    // Clean up old transcriptions every 3 minutes (180,000 milliseconds)
+    const CLEANUP_INTERVAL = 3 * 60 * 1000; // 3 minutes
+    const MAX_AGE = 3 * 60 * 1000; // 3 minutes
+    
+    setInterval(() => {
+      this.cleanupOldTranscriptions(MAX_AGE);
+    }, CLEANUP_INTERVAL);
+    
+    console.log(`🧹 Auto-deletion timer started: cleaning up transcriptions older than 3 minutes`);
+  }
+
+  cleanupOldTranscriptions(maxAge) {
+    const now = Date.now();
+    const transcriptionArea = this.elements.interviewerTranscription;
+    
+    if (!transcriptionArea) return;
+    
+    const entries = transcriptionArea.querySelectorAll('.transcription-entry');
+    const aiSuggestions = transcriptionArea.querySelectorAll('.ai-suggestion');
+    let deletedCount = 0;
+    
+    // Clean up old transcription entries
+    entries.forEach(entry => {
+      const createdAt = parseInt(entry.dataset.createdAt);
+      if (createdAt && (now - createdAt) > maxAge) {
+        // Add fade-out animation before removal
+        entry.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+        entry.style.opacity = '0';
+        entry.style.transform = 'translateX(-100%)';
+        
+        setTimeout(() => {
+          if (entry.parentNode) {
+            entry.parentNode.removeChild(entry);
+          }
+        }, 500);
+        
+        deletedCount++;
+      }
+    });
+    
+    // Clean up old AI suggestions
+    aiSuggestions.forEach(suggestion => {
+      const createdAt = parseInt(suggestion.dataset.createdAt);
+      if (createdAt && (now - createdAt) > maxAge) {
+        // Add fade-out animation before removal
+        suggestion.style.transition = 'opacity 0.3s ease-out';
+        suggestion.style.opacity = '0';
+        
+        setTimeout(() => {
+          if (suggestion.parentNode) {
+            suggestion.parentNode.removeChild(suggestion);
+          }
+        }, 300);
+        
+        deletedCount++;
+      }
+    });
+    
+    if (deletedCount > 0) {
+      console.log(`🧹 Cleaned up ${deletedCount} old transcription entries and AI suggestions`);
+    }
   }
 
   cacheElements() {
@@ -112,6 +226,7 @@ class WeebAssistantUI {
       recordAnswerBtn: document.getElementById('record-answer-btn'),
       practiceFeedback: document.getElementById('practice-feedback'),
       practiceModeBtn: document.getElementById('practice-mode-btn'),
+      testPipBtn: document.getElementById('test-pip-btn'),
       
       // Status
       meetingStatus: document.getElementById('meeting-status'),
@@ -121,7 +236,7 @@ class WeebAssistantUI {
       pipContent: document.getElementById('pip-content'),
       pipCloseBtn: document.getElementById('pip-close-btn'),
       pipResizeBtn: document.getElementById('pip-resize-btn'),
-      pipToggleBtn: document.getElementById('pip-toggle-btn'),
+      pipToggleBtn: document.getElementById('pip-icon-btn'),
       
       // Notifications
       notificationContainer: document.getElementById('notification-container'),
@@ -204,6 +319,7 @@ class WeebAssistantUI {
     this.elements.practiceModeBtn?.addEventListener('click', () => this.togglePracticeMode());
     this.elements.startPracticeBtn?.addEventListener('click', () => this.startPractice());
     this.elements.recordAnswerBtn?.addEventListener('click', () => this.recordAnswer());
+    this.elements.testPipBtn?.addEventListener('click', () => this.testPipReadability());
     
     // PiP Overlay
     this.elements.pipCloseBtn?.addEventListener('click', () => this.hidePiP());
@@ -233,12 +349,22 @@ class WeebAssistantUI {
     this.elements.pipOverlay.addEventListener('mousemove', (e) => this.handleDrag(e));
     document.addEventListener('mouseup', () => this.stopDrag());
     
+    // Setup resize handles
+    const resizeHandles = this.elements.pipOverlay.querySelectorAll('.resize-handle');
+    resizeHandles.forEach(handle => {
+      const direction = handle.className.split(' ').find(cls => cls.startsWith('resize-')).replace('resize-', '');
+      handle.addEventListener('mousedown', (e) => this.startResize(e, direction));
+    });
+    
     // Prevent text selection during drag
     this.elements.pipOverlay.addEventListener('selectstart', (e) => {
       if (this.pipState.isDragging || this.pipState.isResizing) {
         e.preventDefault();
       }
     });
+    
+    // Setup auto-cleanup for PIP content
+    this.setupPipAutoCleanup();
   }
 
   startDrag(e) {
@@ -274,11 +400,60 @@ class WeebAssistantUI {
       const deltaX = e.clientX - this.pipState.resizeStart.x;
       const deltaY = e.clientY - this.pipState.resizeStart.y;
       
-      const newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width + deltaX));
-      const newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height + deltaY));
+      let newWidth = this.pipState.resizeStart.width;
+      let newHeight = this.pipState.resizeStart.height;
+      let newLeft = this.pipState.resizeStart.left;
+      let newTop = this.pipState.resizeStart.top;
       
+      const direction = this.pipState.resizeDirection || 'se';
+      
+      // Handle different resize directions
+      switch (direction) {
+        case 'se': // Southeast (bottom-right)
+          newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width + deltaX));
+          newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height + deltaY));
+          break;
+        case 'sw': // Southwest (bottom-left)
+          newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width - deltaX));
+          newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height + deltaY));
+          newLeft = this.pipState.resizeStart.left + (this.pipState.resizeStart.width - newWidth);
+          break;
+        case 'ne': // Northeast (top-right)
+          newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width + deltaX));
+          newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height - deltaY));
+          newTop = this.pipState.resizeStart.top + (this.pipState.resizeStart.height - newHeight);
+          break;
+        case 'nw': // Northwest (top-left)
+          newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width - deltaX));
+          newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height - deltaY));
+          newLeft = this.pipState.resizeStart.left + (this.pipState.resizeStart.width - newWidth);
+          newTop = this.pipState.resizeStart.top + (this.pipState.resizeStart.height - newHeight);
+          break;
+        case 'n': // North (top)
+          newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height - deltaY));
+          newTop = this.pipState.resizeStart.top + (this.pipState.resizeStart.height - newHeight);
+          break;
+        case 's': // South (bottom)
+          newHeight = Math.max(150, Math.min(400, this.pipState.resizeStart.height + deltaY));
+          break;
+        case 'e': // East (right)
+          newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width + deltaX));
+          break;
+        case 'w': // West (left)
+          newWidth = Math.max(200, Math.min(600, this.pipState.resizeStart.width - deltaX));
+          newLeft = this.pipState.resizeStart.left + (this.pipState.resizeStart.width - newWidth);
+          break;
+      }
+      
+      // Apply the new dimensions and position
       this.elements.pipOverlay.style.width = `${newWidth}px`;
       this.elements.pipOverlay.style.height = `${newHeight}px`;
+      if (newLeft !== this.pipState.resizeStart.left) {
+        this.elements.pipOverlay.style.left = `${newLeft}px`;
+      }
+      if (newTop !== this.pipState.resizeStart.top) {
+        this.elements.pipOverlay.style.top = `${newTop}px`;
+      }
     }
   }
 
@@ -286,17 +461,44 @@ class WeebAssistantUI {
     this.pipState.isDragging = false;
     this.pipState.isResizing = false;
     this.elements.pipOverlay.style.cursor = 'move';
+    this.elements.pipOverlay.style.userSelect = '';
+    
+    // Reset resize direction
+    this.pipState.resizeDirection = null;
   }
 
-  startResize(e) {
+  startResize(e, direction = 'se') {
     this.pipState.isResizing = true;
+    this.pipState.resizeDirection = direction;
     this.pipState.resizeStart = {
       x: e.clientX,
       y: e.clientY,
       width: this.elements.pipOverlay.offsetWidth,
-      height: this.elements.pipOverlay.offsetHeight
+      height: this.elements.pipOverlay.offsetHeight,
+      left: this.elements.pipOverlay.offsetLeft,
+      top: this.elements.pipOverlay.offsetTop
     };
+    
+    // Add visual feedback
+    this.elements.pipOverlay.style.cursor = this.getResizeCursor(direction);
+    this.elements.pipOverlay.style.userSelect = 'none';
+    
     e.preventDefault();
+    e.stopPropagation();
+  }
+
+  getResizeCursor(direction) {
+    const cursorMap = {
+      'n': 'n-resize',
+      's': 's-resize',
+      'e': 'e-resize',
+      'w': 'w-resize',
+      'ne': 'ne-resize',
+      'nw': 'nw-resize',
+      'se': 'se-resize',
+      'sw': 'sw-resize'
+    };
+    return cursorMap[direction] || 'se-resize';
   }
 
   setupAccessibility() {
@@ -1299,7 +1501,8 @@ class WeebAssistantUI {
           const speakerColors = ['#0066cc', '#cc6600', '#00cc66', '#cc0066', '#6600cc'];
           const color = speakerColors[currentSpeaker % speakerColors.length];
           
-          transcript += `<span style="color: ${color}; font-weight: bold;">Speaker ${speakerNumber}: </span>`;
+          let speakerLabel = currentSpeaker === 0 ? 'INTERVIEWER' : `Speaker ${speakerNumber}`;
+          transcript += `<span style="color: ${color}; font-weight: bold;">${speakerLabel}: </span>`;
           speakerStart = i;
         }
         
@@ -1617,13 +1820,14 @@ class WeebAssistantUI {
         placeholder.remove();
       }
       
-      // Create transcription entry
+      // Create transcription entry with timestamp for auto-deletion
       const transcriptionEntry = document.createElement('div');
       transcriptionEntry.className = 'transcription-entry';
       transcriptionEntry.style.marginBottom = '8px';
       transcriptionEntry.style.padding = '8px';
       transcriptionEntry.style.backgroundColor = '#f5f5f5';
       transcriptionEntry.style.borderRadius = '4px';
+      transcriptionEntry.dataset.createdAt = Date.now(); // Add timestamp for auto-deletion
       
       // Add timestamp
       const timestamp = new Date().toLocaleTimeString();
@@ -1642,7 +1846,7 @@ class WeebAssistantUI {
         if (alternative.words && alternative.words[0] && alternative.words[0].speaker !== undefined) {
           const firstWord = alternative.words[0];
           speakerNumber = firstWord.speaker + 1;
-          speakerInfo = `Speaker ${speakerNumber}: `;
+          speakerInfo = speakerNumber === 1 ? 'INTERVIEWER: ' : `Speaker ${speakerNumber}: `;
         }
       }
       
@@ -1712,21 +1916,20 @@ class WeebAssistantUI {
       transcriptionEntry.appendChild(timeElement);
       transcriptionEntry.appendChild(textElement);
       
-      // Add Suggest Answer button
+      // Automatically generate answer for all transcriptions
+      if (transcript.trim().length > 5) {
+        // Generate answer automatically after a short delay to avoid overwhelming the UI
+        setTimeout(() => {
+          this.generateAnswer(transcript, transcriptionEntry);
+        }, 500); // Reduced delay for faster response
+      }
+      
+      // Optional: Add manual suggest button (can be removed or kept for manual override)
       const suggestBtn = document.createElement('button');
       suggestBtn.className = 'suggest-btn';
       suggestBtn.innerHTML = '✨ Suggest Answer';
       suggestBtn.onclick = () => this.generateAnswer(transcript, transcriptionEntry);
       transcriptionEntry.appendChild(suggestBtn);
-      
-      // Automatically generate answer for questions (detected by question marks or interrogative words)
-      const isQuestion = /\?\s*$|^\s*(what|why|how|when|where|who|which|can|could|would|should|is|are|was|were|do|does|did|will|have|has|had)\b/i.test(transcript.trim());
-      if (isQuestion && transcript.trim().length > 10) {
-        // Generate answer automatically after a short delay to avoid overwhelming the UI
-        setTimeout(() => {
-          this.generateAnswer(transcript, transcriptionEntry);
-        }, 1000);
-      }
       
       // Add to transcription area
       transcriptionArea.appendChild(transcriptionEntry);
@@ -1754,9 +1957,10 @@ class WeebAssistantUI {
     const existingSuggestion = container.querySelector('.ai-suggestion');
     if (existingSuggestion) existingSuggestion.remove();
     
-    // Create suggestion container with loading state
+    // Create suggestion container with loading state and timestamp for auto-deletion
     const suggestionDiv = document.createElement('div');
     suggestionDiv.className = 'ai-suggestion loading';
+    suggestionDiv.dataset.createdAt = Date.now(); // Add timestamp for auto-deletion
     suggestionDiv.innerHTML = `
       <div class="ai-header">
         <span class="ai-icon">✨</span>
@@ -1767,14 +1971,20 @@ class WeebAssistantUI {
     container.appendChild(suggestionDiv);
     
     try {
-      const prompt = `You are a helpful interview assistant. The interviewer asked: "${question}". 
-      Please provide a short, casual, and natural answer that I can say. 
-      Keep it under 50 words. Sound confident but humble.`;
+      const prompt = `You are a helpful interview assistant. Analyze this statement: "${question}". 
+      
+      If it's a question: Provide a short, natural, confident answer under 50 words.
+      If it's a statement: Provide a relevant follow-up comment or question under 50 words.
+      
+      Keep it conversational and professional. Sound confident but humble.`;
       
       const answer = await this.callAI(prompt);
       
       suggestionDiv.classList.remove('loading');
       suggestionDiv.querySelector('.ai-content').textContent = answer;
+      
+      // Update PIP with the AI answer
+      this.updatePipAI(answer);
       
       // Add copy button
       const copyBtn = document.createElement('button');
@@ -1865,11 +2075,56 @@ class WeebAssistantUI {
   }
   
   updatePipTranscription(transcript) {
-    const pipContent = this.elements.pipOverlay.querySelector('.pip-content');
-    if (pipContent) {
-      const pipText = pipContent.querySelector('.pip-transcription-text');
-      if (pipText) {
-        pipText.textContent = transcript;
+    const pipText = this.elements.pipOverlay.querySelector('.pip-transcription-text');
+    if (pipText) {
+      pipText.textContent = transcript;
+      
+      // Auto-scroll to bottom
+      pipText.scrollTop = pipText.scrollHeight;
+      
+      // Store timestamp for auto-cleanup
+      pipText.dataset.timestamp = Date.now();
+      
+      // Add delete button if not exists
+      if (!pipText.querySelector('.delete-transcription-btn')) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-transcription-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = 'Delete transcription';
+        deleteBtn.onclick = () => this.clearPipTranscription();
+        pipText.appendChild(deleteBtn);
+      }
+    }
+  }
+
+  updatePipAI(answer) {
+    const pipAIContent = this.elements.pipOverlay.querySelector('.pip-ai-content');
+    if (pipAIContent) {
+      pipAIContent.textContent = answer;
+      
+      // Auto-scroll to bottom
+      pipAIContent.scrollTop = pipAIContent.scrollHeight;
+      
+      // Store timestamp for auto-cleanup
+      pipAIContent.dataset.timestamp = Date.now();
+      
+      // Add delete button if not exists
+      if (!pipAIContent.querySelector('.delete-answer-btn')) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-answer-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = 'Delete answer';
+        deleteBtn.onclick = () => this.clearPipAI();
+        pipAIContent.appendChild(deleteBtn);
+      }
+      
+      // Add fade-in animation for new AI answers
+      const pipAIContainer = this.elements.pipOverlay.querySelector('.pip-ai-container');
+      if (pipAIContainer) {
+        pipAIContainer.style.animation = 'fadeIn 0.3s ease-in-out';
+        setTimeout(() => {
+          pipAIContainer.style.animation = '';
+        }, 300);
       }
     }
   }
@@ -2526,7 +2781,7 @@ class WeebAssistantUI {
           'Go to <a href="https://platform.deepseek.com/api-keys" target="_blank" rel="noopener">platform.deepseek.com/api-keys</a>',
           'Sign up or log in to your account',
           'Click "Create API Key" or "New API Key"',
-          'Give your key a name (e.g., "Weeb Assistant")',
+          'Give your key a name (e.g., "M\'GEMS Interview Buddy")',
           'Copy the generated key (starts with "sk-")',
           'Return here and paste it in the next step'
         ],
@@ -2724,6 +2979,241 @@ class WeebAssistantUI {
   
   completeApiSetup() {
     this.saveApiKeyFromModal();
+  }
+
+  // Platform Detection and Integration Methods
+  startPlatformDetection() {
+    // Check for platforms every 3 seconds
+    setInterval(() => {
+      this.detectActivePlatforms();
+    }, 3000);
+    
+    // Initial detection
+    this.detectActivePlatforms();
+  }
+
+  detectActivePlatforms() {
+    const platforms = {
+      zoom: this.detectZoom(),
+      googleMeet: this.detectGoogleMeet(),
+      teams: this.detectTeams()
+    };
+
+    // Update state with detected platforms
+    Object.keys(platforms).forEach(platform => {
+      this.state.platformIntegration[platform].detected = platforms[platform].detected;
+      if (platforms[platform].detected) {
+        this.state.platformIntegration[platform].meetingId = platforms[platform].meetingId;
+        this.state.platformIntegration[platform].meetingTitle = platforms[platform].meetingTitle;
+      }
+    });
+
+    // Update current platform (priority: Zoom > Teams > Google Meet)
+    if (platforms.zoom.detected) {
+      this.state.currentPlatform = 'zoom';
+    } else if (platforms.teams.detected) {
+      this.state.currentPlatform = 'teams';
+    } else if (platforms.googleMeet.detected) {
+      this.state.currentPlatform = 'googleMeet';
+    } else {
+      this.state.currentPlatform = null;
+    }
+
+    // Update UI if platform changed
+    this.updatePlatformUI();
+  }
+
+  detectZoom() {
+    // Check URL for zoom
+    const zoomPatterns = [
+      /zoom\.us\/j\/(\d+)/,
+      /zoom\.us\/wc\/join\/(\d+)/,
+      /zoom\.us\/s\/(\d+)/,
+      /app\.zoom\.us\/wc\/join\/(\d+)/
+    ];
+
+    // Check current URL
+    for (const pattern of zoomPatterns) {
+      const match = window.location.href.match(pattern);
+      if (match) {
+        return {
+          detected: true,
+          meetingId: match[1],
+          meetingTitle: this.extractMeetingTitle()
+        };
+      }
+    }
+
+    // Check for Zoom Web SDK elements
+    const zoomElements = document.querySelectorAll('[class*="zoom"], [id*="zoom"], [data-testid*="zoom"]');
+    if (zoomElements.length > 0) {
+      return {
+        detected: true,
+        meetingId: this.extractMeetingIdFromTitle(),
+        meetingTitle: this.extractMeetingTitle()
+      };
+    }
+
+    return { detected: false };
+  }
+
+  detectGoogleMeet() {
+    // Check URL for Google Meet
+    const meetPatterns = [
+      /meet\.google\.com\/([a-zA-Z0-9\-]+)/,
+      /hangouts\.google\.com\/.*hangouts\/_\/([a-zA-Z0-9\-]+)/
+    ];
+
+    for (const pattern of meetPatterns) {
+      const match = window.location.href.match(pattern);
+      if (match) {
+        return {
+          detected: true,
+          meetingId: match[1],
+          meetingTitle: this.extractMeetingTitle()
+        };
+      }
+    }
+
+    // Check for Google Meet elements
+    const meetElements = document.querySelectorAll('[class*="meet"], [data-meeting-code], [aria-label*="Google Meet"]');
+    if (meetElements.length > 0) {
+      return {
+        detected: true,
+        meetingId: this.extractMeetingIdFromTitle(),
+        meetingTitle: this.extractMeetingTitle()
+      };
+    }
+
+    return { detected: false };
+  }
+
+  detectTeams() {
+    // Check URL for Microsoft Teams
+    const teamsPatterns = [
+      /teams\.microsoft\.com\/.*thread\.id=([^&]+)/,
+      /teams\.live\.com\/.*thread\.id=([^&]+)/,
+      /teams\.microsoft\.com\/l\/meetup-join\/([^&]+)/
+    ];
+
+    for (const pattern of teamsPatterns) {
+      const match = window.location.href.match(pattern);
+      if (match) {
+        return {
+          detected: true,
+          meetingId: match[1],
+          meetingTitle: this.extractMeetingTitle()
+        };
+      }
+    }
+
+    // Check for Teams elements
+    const teamsElements = document.querySelectorAll('[class*="teams"], [data-tid*="teams"], [aria-label*="Microsoft Teams"]');
+    if (teamsElements.length > 0) {
+      return {
+        detected: true,
+        meetingId: this.extractMeetingIdFromTitle(),
+        meetingTitle: this.extractMeetingTitle()
+      };
+    }
+
+    return { detected: false };
+  }
+
+  extractMeetingTitle() {
+    // Try to extract meeting title from page
+    const titleSelectors = [
+      'title',
+      'h1',
+      '[data-meeting-title]',
+      '[aria-label*="meeting"]',
+      '.meeting-title',
+      '.call-title'
+    ];
+
+    for (const selector of titleSelectors) {
+      const element = document.querySelector(selector);
+      if (element && element.textContent.trim()) {
+        return element.textContent.trim();
+      }
+    }
+
+    return 'Interview Meeting';
+  }
+
+  extractMeetingIdFromTitle() {
+    const title = document.title || '';
+    const idMatch = title.match(/(\d{9,11})/) || title.match(/([a-zA-Z0-9\-]{8,})/);
+    return idMatch ? idMatch[1] : 'unknown';
+  }
+
+  updatePlatformUI() {
+    const statusElement = this.elements.meetingStatus;
+    if (!statusElement) return;
+
+    if (this.state.currentPlatform) {
+      const platformNames = {
+        zoom: 'Zoom',
+        googleMeet: 'Google Meet',
+        teams: 'Microsoft Teams'
+      };
+
+      const platformName = platformNames[this.state.currentPlatform];
+      const meetingInfo = this.state.platformIntegration[this.state.currentPlatform];
+      
+      statusElement.innerHTML = `
+        <div class="platform-indicator platform-${this.state.currentPlatform}">
+          <span class="platform-icon">${this.getPlatformIcon(this.state.currentPlatform)}</span>
+          <span class="platform-name">${platformName}</span>
+          ${meetingInfo.meetingId ? `<span class="meeting-id">ID: ${meetingInfo.meetingId}</span>` : ''}
+        </div>
+      `;
+      
+      statusElement.className = 'meeting-status platform-detected';
+    } else {
+      statusElement.textContent = 'Ready';
+      statusElement.className = 'meeting-status';
+    }
+  }
+
+  getPlatformIcon(platform) {
+    const icons = {
+      zoom: '🔍',
+      googleMeet: '📹',
+      teams: '💼'
+    };
+    return icons[platform] || '🎯';
+  }
+
+  // Test function to verify PIP readability improvements
+  testPipReadability() {
+    // Show PIP mode
+    if (!this.state.isPipMode) {
+      this.togglePiP();
+    }
+    
+    // Add sample transcription with various text lengths
+    const sampleTranscription = `Interview Question: Can you describe your experience with JavaScript frameworks? 
+    
+I've worked extensively with React, Vue.js, and Angular. My most recent project involved building a complex dashboard using React with TypeScript, implementing state management with Redux Toolkit, and creating reusable UI components with Styled Components. The application handled real-time data updates and had to be highly performant for financial trading data.`;
+    
+    // Add sample AI answer with detailed response
+    const sampleAnswer = `Based on your experience with JavaScript frameworks, here are some key points to highlight:
+
+**Technical Expertise**: Your experience spans multiple frameworks (React, Vue.js, Angular), demonstrating versatility and adaptability.
+
+**Recent Project Impact**: The dashboard project shows practical application of advanced concepts including TypeScript for type safety, Redux Toolkit for state management, and Styled Components for maintainable styling.
+
+**Performance Focus**: Mentioning real-time data handling and financial trading requirements indicates understanding of high-performance applications.
+
+**Recommendation**: Emphasize your ability to choose the right tool for each project and your continuous learning approach to stay current with framework updates.`;
+    
+    // Update PIP content
+    this.updatePipTranscription(sampleTranscription);
+    this.updatePipAI(sampleAnswer);
+    
+    // Show notification
+    this.showNotification('PIP readability test completed - check the PIP window!', 'success');
   }
 }
 
