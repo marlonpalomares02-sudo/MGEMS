@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Deepgram Fallback</title>
+</head>
+<body>
+    <h1>Testing Deepgram Fallback</h1>
+    <div id="status">Loading...</div>
+    <div id="logs"></div>
+    
+    <script>
+        // Capture logs
+        const logs = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            logs.push({type: 'log', message: args.join(' ')});
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            logs.push({type: 'error', message: args.join(' ')});
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            logs.push({type: 'warn', message: args.join(' ')});
+            originalWarn.apply(console, args);
+        };
+    </script>
+    
+    <!-- Load the fallback -->
+    <script src="deepgram-fallback.js"></script>
+    
+    <script>
+        // Test if Deepgram is available
+        setTimeout(() => {
+            const statusDiv = document.getElementById('status');
+            const logsDiv = document.getElementById('logs');
+            
+            console.log('Testing Deepgram availability...');
+            console.log('window.Deepgram:', typeof window.Deepgram);
+            console.log('Deepgram:', typeof Deepgram);
+            
+            if (window.Deepgram) {
+                statusDiv.innerHTML = '<h2 style="color: green;">✅ window.Deepgram is available!</h2>';
+                
+                try {
+                    const dg = new window.Deepgram('test-key-12345678');
+                    console.log('Deepgram instance created:', dg);
+                    statusDiv.innerHTML += '<p>Deepgram instance created successfully</p>';
+                } catch (error) {
+                    console.error('Failed to create Deepgram instance:', error);
+                    statusDiv.innerHTML += '<p style="color: red;">Failed to create instance: ' + error.message + '</p>';
+                }
+            } else {
+                statusDiv.innerHTML = '<h2 style="color: red;">❌ window.Deepgram is NOT available!</h2>';
+            }
+            
+            // Display logs
+            logsDiv.innerHTML = '<h3>Logs:</h3>' + logs.map(log => 
+                '<div style="color: ' + (log.type === 'error' ? 'red' : log.type === 'warn' ? 'orange' : 'black') + '">' + 
+                log.type + ': ' + log.message + '</div>'
+            ).join('');
+            
+        }, 1000);
+    </script>
+</body>
+</html>

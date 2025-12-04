@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Log Capture</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        #log-display { 
+            background: #f0f0f0; 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            height: 400px; 
+            overflow-y: auto; 
+            white-space: pre-wrap; 
+        }
+        .log-entry { margin: 2px 0; }
+        .log-error { color: red; }
+        .log-warn { color: orange; }
+        .log-info { color: blue; }
+        .log-debug { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Deepgram Fallback Debug Capture</h1>
+    <button id="start-capture">Start Capture & Test Fallback</button>
+    <button id="clear-logs">Clear Logs</button>
+    <div id="log-display"></div>
+    
+    <!-- Load the fallback first -->
+    <script src="deepgram-fallback.js"></script>
+    
+    <script>
+        const logDisplay = document.getElementById('log-display');
+        const logs = [];
+        
+        function addLog(level, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+            logs.push(logEntry);
+            
+            const div = document.createElement('div');
+            div.className = `log-entry log-${level}`;
+            div.textContent = logEntry;
+            logDisplay.appendChild(div);
+            logDisplay.scrollTop = logDisplay.scrollHeight;
+        }
+        
+        // Override console methods
+        console.log = function(...args) {
+            addLog('debug', args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            addLog('error', args.join(' '));
+        };
+        
+        console.warn = function(...args) {
+            addLog('warn', args.join(' '));
+        };
+        
+        console.info = function(...args) {
+            addLog('info', args.join(' '));
+        };
+        
+        // Test functionality
+        document.getElementById('start-capture').addEventListener('click', async () => {
+            addLog('info', '=== STARTING FALLBACK TEST ===');
+            
+            // Test 1: Check if fallback is loaded
+            addLog('debug', 'Testing fallback availability...');
+            addLog('debug', 'window.Deepgram type: ' + typeof window.Deepgram);
+            addLog('debug', 'window.Deepgram available: ' + !!window.Deepgram);
+            
+            if (window.Deepgram) {
+                addLog('info', '✅ Fallback detected!');
+                
+                // Test 2: Create instance
+                try {
+                    const dg = new window.Deepgram('test-key-12345678');
+                    addLog('info', '✅ Deepgram instance created successfully');
+                    
+                    // Test 3: Check transcription property
+                    addLog('debug', 'transcription property: ' + typeof dg.transcription);
+                    
+                    if (dg.transcription) {
+                        addLog('info', '✅ transcription property available');
+                        
+                        // Test 4: Try to create live transcription
+                        try {
+                            addLog('info', 'Creating live transcription...');
+                            const live = await dg.transcription.live({
+                                model: 'nova-2',
+                                language: 'en-US',
+                                smart_format: true,
+                                diarize: true,
+                                punctuate: true,
+                                utterances: true,
+                                encoding: 'linear16',
+                                sample_rate: 16000,
+                                channels: 1
+                            });
+                            
+                            addLog('info', '✅ Live transcription created!');
+                            addLog('debug', 'Live transcription object: ' + JSON.stringify(Object.keys(live)));
+                            
+                            // Test 5: Set up event handlers
+                            live.on('open', () => {
+                                addLog('info', '✅ WebSocket connection opened!');
+                            });
+                            
+                            live.on('transcriptReceived', (data) => {
+                                addLog('info', '✅ Transcript received: ' + JSON.stringify(data));
+                            });
+                            
+                            live.on('transcript', (data) => {
+                                addLog('info', '✅ Transcript (legacy) received: ' + JSON.stringify(data));
+                            });
+                            
+                            live.on('error', (error) => {
+                                addLog('error', '❌ Connection error: ' + error.message);
+                            });
+                            
+                            live.on('close', () => {
+                                addLog('info', 'ℹ️ WebSocket connection closed');
+                            });
+                            
+                            // Test 6: Send audio data
+                            setTimeout(() => {
+                                addLog('info', 'Testing audio data transmission...');
+                                const testAudio = new Uint8Array(1024);
+                                for (let i = 0; i < testAudio.length; i++) {
+                                    testAudio[i] = Math.random() * 256;
+                                }
+                                
+                                try {
+                                    live.send(testAudio.buffer);
+                                    addLog('info', '✅ Audio data sent successfully');
+                                } catch (sendError) {
+                                    addLog('error', '❌ Failed to send audio: ' + sendError.message);
+                                }
+                            }, 2000);
+                            
+                            addLog('info', '✅ All tests completed! Check for WebSocket connection logs above.');
+                            
+                        } catch (liveError) {
+                            addLog('error', '❌ Failed to create live transcription: ' + liveError.message);
+                        }
+                    } else {
+                        addLog('error', '❌ transcription property not available');
+                    }
+                } catch (instanceError) {
+                    addLog('error', '❌ Failed to create Deepgram instance: ' + instanceError.message);
+                }
+            } else {
+                addLog('error', '❌ Fallback NOT detected!');
+                addLog('error', 'This means script.js will use its own WebSocket implementation.');
+            }
+            
+            addLog('info', '=== TEST COMPLETED ===');
+        });
+        
+        document.getElementById('clear-logs').addEventListener('click', () => {
+            logs.length = 0;
+            logDisplay.innerHTML = '';
+        });
+        
+        // Auto-start initial detection
+        setTimeout(() => {
+            addLog('info', '=== INITIAL FALLBACK DETECTION ===');
+            addLog('debug', 'Page loaded, checking fallback...');
+            addLog('debug', 'window.Deepgram available: ' + !!window.Deepgram);
+            addLog('debug', 'typeof window.Deepgram: ' + typeof window.Deepgram);
+            
+            if (window.Deepgram) {
+                addLog('info', '✅ Fallback is available on page load!');
+            } else {
+                addLog('error', '❌ Fallback not available on page load');
+            }
+        }, 500);
+    </script>
+</body>
+</html>

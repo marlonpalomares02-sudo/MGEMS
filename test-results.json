@@ -1,0 +1,516 @@
+{
+  "summary": {
+    "total": 84,
+    "passed": 84,
+    "failed": 0,
+    "duration": 33,
+    "successRate": "100.0"
+  },
+  "tests": [
+    {
+      "name": "File exists: package.json",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.767Z"
+    },
+    {
+      "name": "File not empty: package.json",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.767Z"
+    },
+    {
+      "name": "File exists: server.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.768Z"
+    },
+    {
+      "name": "File not empty: server.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.768Z"
+    },
+    {
+      "name": "File exists: .env",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.768Z"
+    },
+    {
+      "name": "File not empty: .env",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.769Z"
+    },
+    {
+      "name": "File exists: src/app.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.769Z"
+    },
+    {
+      "name": "File not empty: src/app.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.769Z"
+    },
+    {
+      "name": "File exists: src/api/deepseek.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.769Z"
+    },
+    {
+      "name": "File not empty: src/api/deepseek.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.770Z"
+    },
+    {
+      "name": "File exists: src/api/deepgram.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.770Z"
+    },
+    {
+      "name": "File not empty: src/api/deepgram.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.770Z"
+    },
+    {
+      "name": "File exists: src/core/transcription.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.770Z"
+    },
+    {
+      "name": "File not empty: src/core/transcription.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.771Z"
+    },
+    {
+      "name": "File exists: src/core/ai_processor.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.771Z"
+    },
+    {
+      "name": "File not empty: src/core/ai_processor.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.771Z"
+    },
+    {
+      "name": "File exists: src/core/voice_synthesis.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.771Z"
+    },
+    {
+      "name": "File not empty: src/core/voice_synthesis.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.771Z"
+    },
+    {
+      "name": "File exists: src/utils/audio.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.772Z"
+    },
+    {
+      "name": "File not empty: src/utils/audio.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.772Z"
+    },
+    {
+      "name": "File exists: src/utils/config.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.772Z"
+    },
+    {
+      "name": "File not empty: src/utils/config.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.772Z"
+    },
+    {
+      "name": "File exists: src/utils/weeb_formatter.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.773Z"
+    },
+    {
+      "name": "File not empty: src/utils/weeb_formatter.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.773Z"
+    },
+    {
+      "name": "File exists: public/index.html",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.773Z"
+    },
+    {
+      "name": "File not empty: public/index.html",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.773Z"
+    },
+    {
+      "name": "File exists: public/style.css",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.773Z"
+    },
+    {
+      "name": "File not empty: public/style.css",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.773Z"
+    },
+    {
+      "name": "File exists: public/script.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.774Z"
+    },
+    {
+      "name": "File not empty: public/script.js",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.774Z"
+    },
+    {
+      "name": "File exists: README.md",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.774Z"
+    },
+    {
+      "name": "File not empty: README.md",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.774Z"
+    },
+    {
+      "name": "package.json is valid JSON",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.775Z"
+    },
+    {
+      "name": "package.json has required dependencies",
+      "passed": "^16.3.1",
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.775Z"
+    },
+    {
+      "name": ".env file exists",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.775Z"
+    },
+    {
+      "name": ".env contains required placeholders",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.775Z"
+    },
+    {
+      "name": "src/app.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.776Z"
+    },
+    {
+      "name": "src/app.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.776Z"
+    },
+    {
+      "name": "src/app.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.776Z"
+    },
+    {
+      "name": "src/api/deepseek.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.777Z"
+    },
+    {
+      "name": "src/api/deepseek.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.777Z"
+    },
+    {
+      "name": "src/api/deepseek.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.777Z"
+    },
+    {
+      "name": "src/api/deepgram.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.777Z"
+    },
+    {
+      "name": "src/api/deepgram.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.777Z"
+    },
+    {
+      "name": "src/api/deepgram.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.778Z"
+    },
+    {
+      "name": "src/core/transcription.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.778Z"
+    },
+    {
+      "name": "src/core/transcription.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.778Z"
+    },
+    {
+      "name": "src/core/transcription.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.778Z"
+    },
+    {
+      "name": "src/core/ai_processor.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.779Z"
+    },
+    {
+      "name": "src/core/ai_processor.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.779Z"
+    },
+    {
+      "name": "src/core/ai_processor.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.779Z"
+    },
+    {
+      "name": "src/core/voice_synthesis.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.780Z"
+    },
+    {
+      "name": "src/core/voice_synthesis.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.780Z"
+    },
+    {
+      "name": "src/core/voice_synthesis.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.781Z"
+    },
+    {
+      "name": "src/utils/audio.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.784Z"
+    },
+    {
+      "name": "src/utils/audio.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.784Z"
+    },
+    {
+      "name": "src/utils/audio.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.784Z"
+    },
+    {
+      "name": "src/utils/config.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.785Z"
+    },
+    {
+      "name": "src/utils/config.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.785Z"
+    },
+    {
+      "name": "src/utils/config.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.785Z"
+    },
+    {
+      "name": "src/utils/weeb_formatter.js has valid JavaScript syntax",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.785Z"
+    },
+    {
+      "name": "src/utils/weeb_formatter.js exports functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.785Z"
+    },
+    {
+      "name": "src/utils/weeb_formatter.js has error handling",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.786Z"
+    },
+    {
+      "name": "index.html contains 3-column layout",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.787Z"
+    },
+    {
+      "name": "index.html has accessibility features",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.787Z"
+    },
+    {
+      "name": "index.html has PiP overlay",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.787Z"
+    },
+    {
+      "name": "style.css uses CSS custom properties",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.788Z"
+    },
+    {
+      "name": "style.css has responsive design",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.788Z"
+    },
+    {
+      "name": "style.css has accessibility styles",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.788Z"
+    },
+    {
+      "name": "script.js has WeebAssistantUI class",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.788Z"
+    },
+    {
+      "name": "script.js has PiP functionality",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.789Z"
+    },
+    {
+      "name": "script.js has WebSocket integration",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.789Z"
+    },
+    {
+      "name": "script.js has accessibility features",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.789Z"
+    },
+    {
+      "name": "HTML has proper heading structure",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.789Z"
+    },
+    {
+      "name": "HTML has form labels",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.789Z"
+    },
+    {
+      "name": "HTML has button accessibility",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.790Z"
+    },
+    {
+      "name": "HTML has live regions",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.790Z"
+    },
+    {
+      "name": "CSS has focus styles",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.790Z"
+    },
+    {
+      "name": "CSS supports reduced motion",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.790Z"
+    },
+    {
+      "name": "CSS has high contrast support",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.790Z"
+    },
+    {
+      "name": "CSS has mobile breakpoints",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.791Z"
+    },
+    {
+      "name": "CSS has flexible layouts",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.791Z"
+    },
+    {
+      "name": "CSS has relative units",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.791Z"
+    },
+    {
+      "name": "CSS has viewport units",
+      "passed": true,
+      "error": null,
+      "timestamp": "2025-12-04T11:07:46.791Z"
+    }
+  ],
+  "timestamp": "2025-12-04T11:07:46.794Z"
+}

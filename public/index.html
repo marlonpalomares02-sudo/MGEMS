@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weeb Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <div id="loading-overlay">
+        <div class="loader">Loading...</div>
+    </div>
+
+    <div class="top-bar">
+        <h1>Weeb Assistant</h1>
+        <div class="controls">
+            <button id="create-meeting-btn">Create Meeting</button>
+            <button id="api-config-btn">API Config</button>
+            <button id="debug-settings-btn">Debug</button>
+            <button id="theme-toggle">Theme</button>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+
+    <main id="main-content">
+        <div id="meeting-status">Ready</div>
+
+        <section id="screen-share-main">
+            <h2>Screen Share</h2>
+            <div id="screen-thumbnails"></div>
+            <button id="share-screen-btn">Share Screen</button>
+            <button id="stop-share-btn" disabled>Stop Sharing</button>
+        </section>
+
+        <section id="interviewer-transcription">
+            <h2>Transcription</h2>
+            <div id="transcription-status"></div>
+            <div class="controls">
+                <button id="start-transcription-btn">Start</button>
+                <button id="stop-transcription-btn" disabled>Stop</button>
+                <button id="clear-transcription-btn">Clear</button>
+            </div>
+        </section>
+
+        <section id="questions-area">
+            <h2>Questions</h2>
+            <div id="questions-list"></div>
+            <button id="generate-questions-btn">Generate Questions</button>
+        </section>
+
+        <section id="practice-area">
+            <h2>Practice</h2>
+            <button id="practice-mode-btn">Toggle Practice Mode</button>
+            <button id="start-practice-btn">Start Practice</button>
+            <button id="record-answer-btn">Record Answer</button>
+            <div id="practice-feedback"></div>
+        </section>
+    </main>
+
+    <div id="api-config-panel" class="hidden">
+        <div class="panel-content">
+            <h2>API Configuration</h2>
+            <form id="api-config-form">
+                <div class="form-group">
+                    <label for="deepseek-api-key">DeepSeek API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="deepseek-api-key" placeholder="DeepSeek API Key">
+                        <button type="button" class="toggle-password">Show</button>
+                        <button type="button" id="paste-deepseek-key">Paste</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="deepgram-api-key">Deepgram API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="deepgram-api-key" placeholder="Deepgram API Key">
+                        <button type="button" class="toggle-password">Show</button>
+                        <button type="button" id="paste-deepgram-key">Paste</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="gemini-api-key">Gemini API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="gemini-api-key" placeholder="Gemini API Key">
+                        <button type="button" class="toggle-password">Show</button>
+                        <button type="button" id="paste-gemini-key">Paste</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="gemini-base-url">Gemini Base URL</label>
+                    <input type="text" id="gemini-base-url" value="https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent">
+                </div>
+                <div class="form-group">
+                    <label for="deepseek-base-url">DeepSeek Base URL</label>
+                    <input type="text" id="deepseek-base-url" value="https://api.deepseek.com/v1">
+                </div>
+                <div class="form-group">
+                    <label for="system-prompt">System Prompt</label>
+                    <textarea id="system-prompt"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="test-apis-btn">Test APIs</button>
+                    <button type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="pip-overlay" class="hidden">
+        <div class="pip-header">
+            <button id="pip-toggle-btn">_</button>
+            <button id="pip-resize-btn">[]</button>
+            <button id="pip-close-btn">X</button>
+        </div>
+        <div id="pip-content"></div>
+    </div>
+
+    <!-- Deepgram SDK fallback (primary and only source) -->
+    <script src="deepgram-fallback.js"></script>
+    
+    <!-- Debug: Verify fallback loaded correctly -->
+    <script>
+        console.log('=== DEEPGRAM FALLBACK DEBUG ===');
+        console.log('window.Deepgram type:', typeof window.Deepgram);
+        console.log('Deepgram global type:', typeof Deepgram);
+        console.log('window.Deepgram available:', !!window.Deepgram);
+        
+        if (window.Deepgram) {
+            console.log('✅ Deepgram fallback successfully loaded!');
+            try {
+                const testInstance = new window.Deepgram('debug-key-12345678');
+                console.log('✅ Deepgram instance created successfully:', testInstance);
+                console.log('✅ Deepgram has transcription property:', !!testInstance.transcription);
+            } catch (error) {
+                console.error('❌ Failed to create Deepgram instance:', error);
+            }
+        } else {
+            console.error('❌ Deepgram fallback NOT available!');
+            console.error('This means script.js will use its own WebSocket implementation.');
+        }
+        console.log('=== END DEBUG ===');
+    </script>
+    
+    <script src="script.js"></script>
+</body>
+</html>

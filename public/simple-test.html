@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Fallback Test</title>
+</head>
+<body>
+    <h1>Simple Deepgram Fallback Test</h1>
+    <div id="output"></div>
+    
+    <script src="deepgram-fallback.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            output.appendChild(div);
+        }
+        
+        // Test 1: Check if fallback is available
+        log('Testing fallback availability...');
+        log('window.Deepgram exists: ' + (typeof window.Deepgram !== 'undefined'));
+        log('window.Deepgram type: ' + typeof window.Deepgram);
+        
+        if (window.Deepgram) {
+            log('✅ SUCCESS: Fallback is available!');
+            
+            // Test 2: Try to create instance
+            try {
+                const dg = new window.Deepgram('test-key-12345678');
+                log('✅ SUCCESS: Deepgram instance created');
+                
+                // Test 3: Check transcription
+                if (dg.transcription) {
+                    log('✅ SUCCESS: transcription property exists');
+                } else {
+                    log('❌ ERROR: transcription property missing');
+                }
+            } catch (error) {
+                log('❌ ERROR: Failed to create instance: ' + error.message);
+            }
+        } else {
+            log('❌ ERROR: Fallback NOT available!');
+        }
+        
+        log('Test completed.');
+    </script>
+</body>
+</html>

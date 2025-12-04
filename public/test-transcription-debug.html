@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Transcription Debug</title>
+</head>
+<body>
+    <h1>Test Transcription Debug</h1>
+    <button id="test-transcription">Test Transcription Start</button>
+    <div id="logs"></div>
+    
+    <script src="deepgram-fallback.js"></script>
+    
+    <script>
+        // Capture all console output
+        const logs = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function captureLog(type, ...args) {
+            const message = args.join(' ');
+            logs.push({type, message, timestamp: new Date().toISOString()});
+            const logsDiv = document.getElementById('logs');
+            if (logsDiv) {
+                logsDiv.innerHTML = '<h3>Captured Logs:</h3>' + logs.map(log => 
+                    `<div style="color: ${log.type === 'error' ? 'red' : log.type === 'warn' ? 'orange' : 'black'}; font-family: monospace; font-size: 12px; margin: 2px 0;">
+                        [${log.timestamp}] ${log.type.toUpperCase()}: ${log.message}
+                    </div>`
+                ).join('');
+            }
+        }
+        
+        console.log = function(...args) {
+            captureLog('log', ...args);
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            captureLog('error', ...args);
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            captureLog('warn', ...args);
+            originalWarn.apply(console, args);
+        };
+        
+        // Test button functionality
+        document.getElementById('test-transcription').addEventListener('click', async () => {
+            console.log('=== MANUAL TRANSCRIPTION TEST ===');
+            
+            // Simulate the Deepgram detection from script.js
+            console.log('Testing Deepgram detection...');
+            console.log('window.Deepgram available:', !!window.Deepgram);
+            console.log('typeof window.Deepgram:', typeof window.Deepgram);
+            
+            if (window.Deepgram) {
+                console.log('✅ window.Deepgram found!');
+                try {
+                    const dg = new window.Deepgram('test-key-12345678');
+                    console.log('✅ Deepgram instance created:', dg);
+                    
+                    if (dg.transcription) {
+                        console.log('✅ transcription property exists');
+                        
+                        // Test the live transcription
+                        console.log('Testing live transcription...');
+                        const live = await dg.transcription.live({
+                            model: 'nova-2',
+                            language: 'en-US'
+                        });
+                        console.log('✅ Live transcription created:', live);
+                        
+                        // Test event handlers
+                        live.on('open', () => {
+                            console.log('✅ Connection opened!');
+                        });
+                        
+                        live.on('transcriptReceived', (data) => {
+                            console.log('✅ Transcript received:', data);
+                        });
+                        
+                        live.on('error', (error) => {
+                            console.error('❌ Connection error:', error);
+                        });
+                        
+                        // Test sending audio data
+                        setTimeout(() => {
+                            console.log('Testing audio data send...');
+                            const testAudio = new Uint8Array(1024);
+                            live.send(testAudio.buffer);
+                            console.log('✅ Audio data sent');
+                        }, 2000);
+                        
+                    } else {
+                        console.error('❌ transcription property missing');
+                    }
+                } catch (error) {
+                    console.error('❌ Error creating Deepgram instance:', error);
+                }
+            } else {
+                console.error('❌ window.Deepgram NOT found!');
+            }
+            
+            console.log('=== END MANUAL TEST ===');
+        });
+        
+        // Auto-start test after page loads
+        setTimeout(() => {
+            console.log('=== PAGE LOAD DEBUG ===');
+            console.log('window.Deepgram available:', !!window.Deepgram);
+            console.log('typeof window.Deepgram:', typeof window.Deepgram);
+            console.log('=== END PAGE LOAD DEBUG ===');
+        }, 500);
+    </script>
+</body>
+</html>
