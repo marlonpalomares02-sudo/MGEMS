@@ -14,7 +14,6 @@ class WeebAssistantUI {
       deepseekBaseUrl: 'https://api.deepseek.com/v1',
       geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
     };
-    
     this.state = {
       isRecording: false,
       isTranscribing: false,
@@ -29,7 +28,12 @@ class WeebAssistantUI {
       screenShareStream: null,
       screenAudioContext: null,
       screenAudioProcessor: null,
+      microphoneStream: null,
+      microphoneAudioContext: null,
+      microphoneAudioProcessor: null,
       deepgramSocket: null,
+      audioBufferQueue: null,
+      lastAudioSendTime: null,
       audioWorkletLoaded: false,
       currentPlatform: null,
       detectedPlatforms: [],
@@ -46,6 +50,7 @@ class WeebAssistantUI {
       dragOffset: { x: 0, y: 0 },
       resizeStart: { x: 0, y: 0, width: 0, height: 0 }
     };
+    this.pingInterval = null;
     
     this.init();
   }
@@ -89,12 +94,16 @@ class WeebAssistantUI {
     this.cacheElements();
     this.loadConfig();
     this.setupEventListeners();
-    this.connectWebSocket();
     this.setupPiP();
     this.setupAccessibility();
     this.setupResponsive();
     this.loadTheme();
     this.hideLoading(); // Hide loading overlay after initialization
+    
+    // Delay WebSocket connection to ensure page is fully loaded
+    setTimeout(() => {
+      this.connectWebSocket();
+    }, 1000);
     
     // Start auto-deletion timer for old transcriptions and AI answers (every 3 minutes)
     this.startAutoDeletionTimer();
@@ -112,7 +121,7 @@ class WeebAssistantUI {
           this.toggleApiConfig(true);
         }, 2000);
       }
-    }, 1000);
+    }, 2000);
     
     console.log('🌸 M\'GEMS Interview Buddy UI initialized');
   }
@@ -588,36 +597,90 @@ class WeebAssistantUI {
 
   connectWebSocket() {
     try {
-      this.websocket = new WebSocket('ws://localhost:3000');
+      // Use current host and port, fallback to localhost:3000
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname || 'localhost';
+      const port = window.location.port || '3000';
+      const wsUrl = `${protocol}//${host}:${port}`;
+      
+      console.log('Connecting to WebSocket at:', wsUrl);
+      this.websocket = new WebSocket(wsUrl);
       
       this.websocket.onopen = () => {
-        console.log('🔌 WebSocket connected');
+        console.log('🔌 WebSocket connected successfully');
         this.showNotification('Connected to server', 'success');
+        
+        // Start ping interval to keep connection alive
+        this.startPingInterval();
       };
       
       this.websocket.onmessage = (event) => {
-        this.handleWebSocketMessage(JSON.parse(event.data));
+        try {
+          this.handleWebSocketMessage(JSON.parse(event.data));
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
       };
       
-      this.websocket.onclose = () => {
-        console.log('🔌 WebSocket disconnected');
+      this.websocket.onclose = (event) => {
+        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
         this.showNotification('Disconnected from server', 'warning');
-        // Attempt reconnection after 5 seconds
-        setTimeout(() => this.connectWebSocket(), 5000);
+        
+        // Stop ping interval
+        this.stopPingInterval();
+        
+        // Only attempt reconnection if it wasn't a normal close
+        if (event.code !== 1000 && event.code !== 1001) {
+          console.log('Attempting WebSocket reconnection in 5 seconds...');
+          setTimeout(() => this.connectWebSocket(), 5000);
+        }
       };
       
       this.websocket.onerror = (error) => {
         console.error('WebSocket error:', error);
-        this.showNotification('Connection error', 'error');
+        console.error('WebSocket readyState:', this.websocket?.readyState);
+        this.showNotification('Connection error - check server status', 'error');
       };
     } catch (error) {
       console.error('Failed to connect WebSocket:', error);
       this.showNotification('Failed to connect to server', 'error');
+      
+      // Retry connection after 10 seconds
+      console.log('Retrying WebSocket connection in 10 seconds...');
+      setTimeout(() => this.connectWebSocket(), 10000);
+    }
+  }
+
+  startPingInterval() {
+    // Clear any existing ping interval
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+    
+    // Send ping every 30 seconds to keep connection alive
+    this.pingInterval = setInterval(() => {
+      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+        this.websocket.send(JSON.stringify({ type: 'ping', data: {} }));
+      }
+    }, 30000);
+  }
+
+  stopPingInterval() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
   }
 
   handleWebSocketMessage(message) {
     switch (message.type) {
+      case 'connection':
+        console.log('Server connection established:', message.data);
+        break;
+      case 'pong':
+        // Server responded to ping, connection is alive
+        console.log('WebSocket pong received, connection alive');
+        break;
       case 'transcription':
         this.handleTranscription(message.data);
         break;
@@ -631,7 +694,7 @@ class WeebAssistantUI {
         this.handlePracticeFeedback(message.data);
         break;
       case 'error':
-        this.showNotification(message.message, 'error');
+        this.showNotification(message.message || message.data?.message, 'error');
         break;
       case 'config_updated':
         this.showNotification('Configuration updated on server', 'success');
@@ -641,6 +704,10 @@ class WeebAssistantUI {
         break;
       case 'screen_share_status':
         this.handleScreenShareStatus(message.data);
+        break;
+      case 'echo':
+        // Handle echo responses for testing
+        console.log('Echo response:', message.data);
         break;
       default:
         console.log('Unknown message type:', message.type);
@@ -668,11 +735,15 @@ class WeebAssistantUI {
       const response = await fetch('/api/config');
       const serverConfig = await response.json();
       
+      console.log('Server config loaded:', serverConfig);
+      
       // If environment variables are set, use them
       if (serverConfig.deepseek?.envKey) {
         this.config.deepseekApiKey = serverConfig.deepseek.envKey;
         this.elements.deepseekKeyInput.value = serverConfig.deepseek.envKey;
-        console.log('Loaded DeepSeek API key from environment');
+        console.log('Loaded DeepSeek API key from environment:', serverConfig.deepseek.envKey);
+      } else {
+        console.log('No DeepSeek API key found in environment');
       }
       
       if (serverConfig.deepgram?.envKey) {
@@ -686,6 +757,12 @@ class WeebAssistantUI {
         this.elements.geminiKeyInput.value = serverConfig.gemini.envKey;
         console.log('Loaded Gemini API key from environment');
       }
+      
+      console.log('Final config after loading:', {
+        deepseekApiKey: this.config.deepseekApiKey,
+        deepgramApiKey: this.config.deepgramApiKey,
+        geminiApiKey: this.config.geminiApiKey
+      });
       
       // Update UI to show environment-loaded status
       this.updateEnvStatus(serverConfig);
@@ -947,40 +1024,69 @@ class WeebAssistantUI {
   }
 
   startTranscription() {
-    if (this.websocket?.readyState === WebSocket.OPEN) {
-      this.websocket.send(JSON.stringify({
-        type: 'start_transcription',
-        data: {}
-      }));
+    if (!this.config.deepgramApiKey) {
+      this.showNotification('Please configure Deepgram API key first', 'error');
+      return;
+    }
+    
+    try {
+      // Connect to Deepgram directly
+      this.connectDeepgramDirectly();
       this.state.isTranscribing = true;
       this.updateTranscriptionUI();
       this.showNotification('Transcription started', 'info');
-    } else {
-      this.showNotification('Not connected to server', 'error');
+    } catch (error) {
+      console.error('Failed to start transcription:', error);
+      this.showNotification('Failed to start transcription', 'error');
     }
   }
 
   stopTranscription() {
-    if (this.websocket?.readyState === WebSocket.OPEN) {
-      this.websocket.send(JSON.stringify({
-        type: 'stop_transcription',
-        data: {}
-      }));
-      this.state.isTranscribing = false;
-      this.updateTranscriptionUI();
-      this.showNotification('Transcription stopped', 'info');
+    // Stop Deepgram connection
+    if (this.state.deepgramSocket) {
+      try {
+        // Check if it's a Deepgram SDK connection or manual WebSocket
+        if (typeof this.state.deepgramSocket.removeAllListeners === 'function') {
+          // Deepgram SDK connection
+          this.state.deepgramSocket.removeAllListeners();
+          this.state.deepgramSocket.close();
+        } else {
+          // Manual WebSocket connection
+          this.state.deepgramSocket.close();
+        }
+      } catch (error) {
+        console.error('Error closing Deepgram connection:', error);
+      }
+      this.state.deepgramSocket = null;
     }
+    
+    // Stop microphone stream
+    if (this.state.microphoneStream) {
+      this.state.microphoneStream.getTracks().forEach(track => track.stop());
+      this.state.microphoneStream = null;
+    }
+    
+    // Stop microphone audio processor
+    if (this.state.microphoneAudioProcessor) {
+      this.state.microphoneAudioProcessor.disconnect();
+      this.state.microphoneAudioProcessor = null;
+    }
+    
+    // Stop microphone audio context
+    if (this.state.microphoneAudioContext) {
+      this.state.microphoneAudioContext.close();
+      this.state.microphoneAudioContext = null;
+    }
+    
+    this.state.isTranscribing = false;
+    this.updateTranscriptionUI();
+    this.showNotification('Transcription stopped', 'info');
   }
 
   clearTranscription() {
-    if (this.elements.transcriptionArea) {
-      this.elements.transcriptionArea.innerHTML = '<div class="transcription-placeholder">📝 Transcriptions will appear here...</div>';
-      this.showNotification('Transcription cleared', 'info');
-    }
-    
-    // Also clear interviewer transcription if it exists
     if (this.elements.interviewerTranscription) {
       this.elements.interviewerTranscription.innerHTML = '<div class="transcription-placeholder">📝 Transcriptions will appear here...</div>';
+      this.showNotification('Transcription cleared', 'info');
     }
   }
 
@@ -1217,6 +1323,63 @@ class WeebAssistantUI {
     this.updateTranscriptionStatus('Ready');
   }
   
+  connectDeepgramDirectly() {
+    // Connect to Deepgram for microphone transcription
+    this.startMicrophoneTranscription();
+  }
+
+  async startMicrophoneTranscription() {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 16000,
+          channelCount: 1
+        } 
+      });
+      
+      console.log('Microphone access granted');
+      this.showNotification('Microphone access granted', 'success');
+      
+      // Create audio context for microphone
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000
+      });
+      
+      // Ensure audio context is resumed
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
+      const source = audioContext.createMediaStreamSource(stream);
+      
+      // Set up audio processing for microphone (use simplified approach)
+      await this.setupMicrophoneAudioProcessing(audioContext, source, stream);
+      
+      // Store microphone stream for cleanup
+      this.state.microphoneStream = stream;
+      this.state.microphoneAudioContext = audioContext;
+      
+      console.log('Microphone transcription setup completed');
+      
+    } catch (error) {
+      console.error('Failed to access microphone:', error);
+      
+      if (error.name === 'NotAllowedError') {
+        this.showNotification('Microphone access denied. Please allow microphone access in your browser settings.', 'error');
+      } else if (error.name === 'NotFoundError') {
+        this.showNotification('No microphone found. Please check your audio settings.', 'error');
+      } else {
+        this.showNotification('Failed to access microphone: ' + error.message, 'error');
+      }
+      
+      throw error;
+    }
+  }
+
   async startDeepgramStream() {
     // Connect to Deepgram WebSocket for real-time transcription using official SDK
     const deepgramApiKey = this.config.deepgramApiKey;
@@ -1413,6 +1576,11 @@ class WeebAssistantUI {
   // Helper method to send audio data to Deepgram (optimized for real-time streaming)
   sendAudioToDeepgram(audioBuffer) {
     if (!this.state.deepgramSocket) {
+      // If no API key is configured, provide mock transcription for testing
+      if (!this.config.deepgramApiKey || this.config.deepgramApiKey === 'your_deepgram_api_key_here') {
+        this.generateMockTranscription();
+        return;
+      }
       console.warn('No Deepgram socket available, skipping audio data');
       return;
     }
@@ -1636,111 +1804,64 @@ class WeebAssistantUI {
     }
   }
 
-  // New function to setup audio processing
+  // New function to setup audio processing for microphone (simplified)
+  async setupMicrophoneAudioProcessing(audioContext, source, stream) {
+    try {
+      console.log('Setting up microphone audio processing with ScriptProcessorNode...');
+      
+      // Use ScriptProcessorNode for microphone audio (more reliable)
+      const bufferSize = 2048;
+      const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+      
+      console.log('ScriptProcessorNode created successfully');
+      
+      // Set up audio processing
+      processor.onaudioprocess = (event) => {
+        if (!this.state.isTranscribing) return;
+        
+        const inputData = event.inputBuffer.getChannelData(0);
+        const audioData = new Float32Array(inputData.length);
+        
+        // Copy audio data
+        for (let i = 0; i < inputData.length; i++) {
+          audioData[i] = inputData[i];
+        }
+        
+        // Send to Deepgram
+        this.processAudioForTranscription(audioData);
+      };
+      
+      // Connect the audio pipeline
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+      
+      // Store processor for cleanup
+      this.state.microphoneAudioProcessor = processor;
+      
+      // Start Deepgram connection
+      await this.startDeepgramStream();
+      
+      // Update UI
+      this.showNotification('Microphone transcription started', 'success');
+      this.updateTranscriptionStatus('Transcribing microphone audio...');
+      
+      console.log('Microphone audio processing setup completed');
+      
+    } catch (error) {
+      console.error('Failed to setup microphone audio processing:', error);
+      this.showNotification('Failed to setup microphone audio processing', 'error');
+      throw error;
+    }
+  }
+
+  // New function to setup audio processing - simplified approach
   async setupAudioProcessing(audioContext, source, stream) {
     try {
-      // Use AudioWorkletNode for modern audio processing
-      if (audioContext.audioWorklet) {
-        console.log('Setting up AudioWorklet for audio processing...');
-        
-        let audioWorkletSuccess = false;
-        
-        if (!this.state.audioWorkletLoaded) {
-          console.log('Loading AudioWorklet module...');
-          console.log('AudioContext state:', audioContext.state);
-          console.log('AudioWorklet available:', !!audioContext.audioWorklet);
-          
-          try {
-            // Ensure AudioContext is running before loading module
-            if (audioContext.state === 'suspended') {
-              console.log('Resuming AudioContext...');
-              await audioContext.resume();
-              console.log('AudioContext resumed, state:', audioContext.state);
-            }
-            
-            console.log('Attempting to load audio-processor.js...');
-            await audioContext.audioWorklet.addModule('audio-processor.js');
-            this.state.audioWorkletLoaded = true;
-            console.log('AudioWorklet module loaded successfully');
-            
-            // Give more time for processor registration
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            console.log('Processor registration wait completed');
-            
-            // Test if processor is actually available
-            try {
-              console.log('Testing AudioWorklet processor availability...');
-              const testNode = new AudioWorkletNode(audioContext, 'audio-processor', {
-                processorOptions: { bufferSize: 256, sampleRate: 16000 },
-                outputChannelCount: [1]
-              });
-              testNode.disconnect(); // Disconnect without connecting
-              console.log('AudioWorklet processor verification successful');
-            } catch (testError) {
-              console.error('AudioWorklet processor test failed:', testError);
-              this.state.audioWorkletLoaded = false;
-              console.log('Falling back to ScriptProcessor due to AudioWorklet registration failure');
-            }
-            
-          } catch (loadError) {
-            console.error('Failed to load AudioWorklet module:', loadError);
-            console.error('Error name:', loadError.name);
-            console.error('Error message:', loadError.message);
-            this.state.audioWorkletLoaded = false;
-            // Don't throw here, let it fall through to ScriptProcessor
-          }
-        }
-        
-        if (this.state.audioWorkletLoaded) {
-          console.log('Creating AudioWorkletNode...');
-          console.log('Available processors:', audioContext.audioWorklet ? 'audioWorklet exists' : 'audioWorklet missing');
-          let processor;
-          try {
-            // Create with minimal options first to avoid conflicts
-            processor = new AudioWorkletNode(audioContext, 'audio-processor', {
-              outputChannelCount: [1],
-              processorOptions: {
-                bufferSize: 2048,
-                sampleRate: 16000
-              }
-            });
-            console.log('AudioWorkletNode created successfully');
-            audioWorkletSuccess = true;
-            
-            // Connect the audio pipeline
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-            
-            this.state.screenAudioContext = audioContext;
-            this.state.screenAudioProcessor = processor;
-            this.state.isTranscribingScreen = true;
-            
-            // Set up audio data processing
-            processor.port.onmessage = (event) => {
-              if (event.data.type === 'audio-data' && this.state.isTranscribingScreen) {
-                console.log('Received audio data from AudioWorklet, size:', event.data.buffer.length);
-                this.processAudioForTranscription(event.data.buffer);
-              }
-            };
-            
-            console.log('AudioWorklet setup completed successfully');
-            
-          } catch (nodeError) {
-            console.error('Failed to create AudioWorkletNode:', nodeError);
-            console.error('Error details:', nodeError.name, nodeError.message);
-            audioWorkletSuccess = false;
-          }
-        }
-        
-        if (!audioWorkletSuccess) {
-          console.log('AudioWorklet failed, falling back to ScriptProcessorNode');
-          this.setupScriptProcessorFallback(audioContext, source);
-        }
-        
-      } else {
-        console.log('AudioWorklet not supported, using ScriptProcessorNode fallback');
-        this.setupScriptProcessorFallback(audioContext, source);
-      }
+      console.log('Setting up audio processing for screen sharing...');
+      
+      // Skip AudioWorklet entirely for screen sharing - use proven ScriptProcessorNode
+      console.log('Using ScriptProcessorNode for screen audio (AudioWorklet skipped for reliability)');
+      this.setupScriptProcessorFallback(audioContext, source);
       
       // Start Deepgram connection
       await this.startDeepgramStream();
@@ -1758,48 +1879,131 @@ class WeebAssistantUI {
     }
   }
   
-  // Fallback method for ScriptProcessorNode (deprecated but needed for older browsers)
+  // Fallback method for ScriptProcessorNode - reliable audio processing for screen sharing
   setupScriptProcessorFallback(audioContext, source) {
     try {
-      console.log('Setting up ScriptProcessorNode fallback for audio processing...');
+      console.log('Setting up ScriptProcessorNode for screen audio processing...');
       
-      // Create ScriptProcessorNode with smaller buffer for lower latency (2048 instead of 4096)
+      // Ensure AudioContext is in a good state
+      if (audioContext.state === 'suspended') {
+        console.log('AudioContext is suspended, attempting to resume...');
+        audioContext.resume().then(() => {
+          console.log('AudioContext resumed successfully');
+        }).catch(err => {
+          console.warn('Failed to resume AudioContext:', err);
+        });
+      }
+      
+      // Create ScriptProcessorNode with optimal buffer size for real-time processing
       const processor = audioContext.createScriptProcessor(2048, 1, 1);
+      
+      // Set up the audio processing pipeline
       source.connect(processor);
       processor.connect(audioContext.destination);
       
+      // Update state to indicate we're processing
+      this.state.screenAudioContext = audioContext;
       this.state.screenAudioProcessor = processor;
+      this.state.isTranscribingScreen = true;
       
-      // Process audio data (fallback) - optimized for real-time streaming
+      // Process audio data in real-time
       processor.onaudioprocess = (e) => {
         if (!this.state.isTranscribingScreen) return;
         
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Send smaller chunks for real-time performance
-        const chunkSize = 512;
-        for (let offset = 0; offset < inputData.length; offset += chunkSize) {
-          const currentChunkSize = Math.min(chunkSize, inputData.length - offset);
+        try {
+          const inputData = e.inputBuffer.getChannelData(0);
           
-          // Convert float32 to int16 for Deepgram
-          const buffer = new ArrayBuffer(currentChunkSize * 2);
-          const view = new DataView(buffer);
-          for (let i = 0; i < currentChunkSize; i++) {
-            const sample = Math.max(-1, Math.min(1, inputData[offset + i]));
-            view.setInt16(i * 2, sample * 0x7FFF, true);
+          // Process audio in small chunks for real-time performance
+          const chunkSize = 512;
+          for (let offset = 0; offset < inputData.length; offset += chunkSize) {
+            const currentChunkSize = Math.min(chunkSize, inputData.length - offset);
+            
+            // Convert float32 to int16 for Deepgram
+            const buffer = new ArrayBuffer(currentChunkSize * 2);
+            const view = new DataView(buffer);
+            for (let i = 0; i < currentChunkSize; i++) {
+              const sample = Math.max(-1, Math.min(1, inputData[offset + i]));
+              view.setInt16(i * 2, sample * 0x7FFF, true);
+            }
+            
+            // Send to Deepgram for transcription
+            this.sendAudioToDeepgram(buffer);
           }
           
-          // Send to Deepgram via WebSocket or SDK
-          this.sendAudioToDeepgram(buffer);
+          console.log(`Screen audio processed: ${inputData.length} samples in ${Math.ceil(inputData.length / chunkSize)} chunks`);
+        } catch (processError) {
+          console.error('Error processing audio chunk:', processError);
         }
-        
-        console.log(`ScriptProcessor fallback: Processed ${inputData.length} samples in ${Math.ceil(inputData.length / 512)} chunks`);
       };
       
-      console.log('ScriptProcessorNode fallback setup completed');
+      console.log('ScriptProcessorNode setup completed successfully for screen audio');
+      
     } catch (error) {
-      console.error('ScriptProcessorNode fallback failed:', error);
-      this.showNotification('Audio processing setup failed', 'error');
+      console.error('ScriptProcessorNode setup failed:', error);
+      this.showNotification('Screen audio processing setup failed', 'error');
+      throw error;
+    }
+  }
+  
+  // Mock transcription generator for testing without Deepgram API key
+  generateMockTranscription() {
+    try {
+      // Only generate mock transcription occasionally to avoid spam
+      if (!this.state.lastMockTranscriptionTime) {
+        this.state.lastMockTranscriptionTime = Date.now();
+      }
+      
+      const now = Date.now();
+      const timeSinceLastMock = now - this.state.lastMockTranscriptionTime;
+      
+      // Generate mock transcription every 3-5 seconds
+      if (timeSinceLastMock < 3000 + Math.random() * 2000) {
+        return;
+      }
+      
+      this.state.lastMockTranscriptionTime = now;
+      
+      // Mock interview responses that would be relevant for screen sharing
+      const mockTranscriptions = [
+        "This is a test of the screen sharing audio transcription system.",
+        "The audio is being captured and processed successfully.",
+        "Screen sharing audio transcription is working correctly.",
+        "Testing the real-time audio processing functionality.",
+        "The system is capturing audio from the screen share.",
+        "Audio transcription test - everything appears to be functioning.",
+        "Mock transcription: Screen audio capture is operational.",
+        "Testing audio levels and transcription quality.",
+        "The transcription system is ready for real content."
+      ];
+      
+      const randomTranscription = mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)];
+      
+      // Create mock Deepgram response data
+      const mockData = {
+        type: 'Results',
+        channel: {
+          alternatives: [{
+            transcript: randomTranscription,
+            confidence: 0.95,
+            words: randomTranscription.split(' ').map((word, index) => ({
+              word: word,
+              start: index * 0.5,
+              end: (index + 1) * 0.5,
+              confidence: 0.95,
+              speaker: 0
+            }))
+          }]
+        },
+        duration: 3.0,
+        is_final: true,
+        speech_final: true
+      };
+      
+      console.log('Mock transcription generated:', randomTranscription);
+      this.displayTranscription(randomTranscription, mockData);
+      
+    } catch (error) {
+      console.error('Error generating mock transcription:', error);
     }
   }
   
@@ -1949,6 +2153,68 @@ class WeebAssistantUI {
       console.error('Error displaying transcription:', error);
     }
   }
+  
+  // Mock transcription generator for testing without Deepgram API key
+  generateMockTranscription() {
+    try {
+      // Only generate mock transcription occasionally to avoid spam
+      if (!this.state.lastMockTranscriptionTime) {
+        this.state.lastMockTranscriptionTime = Date.now();
+      }
+      
+      const now = Date.now();
+      const timeSinceLastMock = now - this.state.lastMockTranscriptionTime;
+      
+      // Generate mock transcription every 3-5 seconds
+      if (timeSinceLastMock < 3000 + Math.random() * 2000) {
+        return;
+      }
+      
+      this.state.lastMockTranscriptionTime = now;
+      
+      // Mock interview responses that would be relevant for screen sharing
+      const mockTranscriptions = [
+        "This is a test of the screen sharing audio transcription system.",
+        "The audio is being captured and processed successfully.",
+        "Screen sharing audio transcription is working correctly.",
+        "Testing the real-time audio processing functionality.",
+        "The system is capturing audio from the screen share.",
+        "Audio transcription test - everything appears to be functioning.",
+        "Mock transcription: Screen audio capture is operational.",
+        "Testing audio levels and transcription quality.",
+        "The transcription system is ready for real content."
+      ];
+      
+      const randomTranscription = mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)];
+      
+      // Create mock Deepgram response data
+      const mockData = {
+        type: 'Results',
+        channel: {
+          alternatives: [{
+            transcript: randomTranscription,
+            confidence: 0.95,
+            words: randomTranscription.split(' ').map((word, index) => ({
+              word: word,
+              start: index * 0.5,
+              end: (index + 1) * 0.5,
+              confidence: 0.95,
+              speaker: 0
+            }))
+          }]
+        },
+        duration: 3.0,
+        is_final: true,
+        speech_final: true
+      };
+      
+      console.log('Mock transcription generated:', randomTranscription);
+      this.displayTranscription(randomTranscription, mockData);
+      
+    } catch (error) {
+      console.error('Error generating mock transcription:', error);
+    }
+  }
 
   async generateAnswer(question, container) {
     if (!question) return;
@@ -2009,6 +2275,10 @@ class WeebAssistantUI {
     // Try DeepSeek first
     if (this.config.deepseekApiKey) {
       try {
+        console.log('Calling DeepSeek API with prompt:', prompt);
+        console.log('DeepSeek API key:', this.config.deepseekApiKey);
+        console.log('DeepSeek base URL:', this.config.deepseekBaseUrl);
+        
         const proxyResponse = await fetch('/api/ai-proxy', {
           method: 'POST',
           headers: {
@@ -2031,11 +2301,20 @@ class WeebAssistantUI {
           })
         });
         
+        console.log('Proxy response status:', proxyResponse.status);
+        console.log('Proxy response headers:', proxyResponse.headers);
+        
         if (proxyResponse.ok) {
           const data = await proxyResponse.json();
+          console.log('DeepSeek API response data:', data);
           if (data.choices && data.choices[0]) {
             return data.choices[0].message.content.trim();
+          } else {
+            console.log('No choices in DeepSeek response');
           }
+        } else {
+          const errorText = await proxyResponse.text();
+          console.log('DeepSeek API error response:', errorText);
         }
       } catch (e) {
         console.warn('DeepSeek API failed, trying fallback...', e);
@@ -3235,7 +3514,13 @@ document.addEventListener('visibilitychange', () => {
 
 // Handle beforeunload
 window.addEventListener('beforeunload', () => {
-  if (window.weebAssistant?.websocket) {
-    window.weebAssistant.websocket.close();
+  if (window.weebAssistant) {
+    // Stop ping interval
+    window.weebAssistant.stopPingInterval();
+    
+    // Close WebSocket connection
+    if (window.weebAssistant.websocket) {
+      window.weebAssistant.websocket.close();
+    }
   }
 });

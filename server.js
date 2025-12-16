@@ -19,25 +19,45 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // WebSocket connection handling
-wss.on('connection', (ws) => {
-  console.log('Client connected');
+wss.on('connection', (ws, req) => {
+  console.log('Client connected from:', req.socket.remoteAddress);
+  
+  // Send welcome message
+  ws.send(JSON.stringify({ 
+    type: 'connection', 
+    data: { status: 'connected', timestamp: new Date().toISOString() }
+  }));
 
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
       console.log('Received:', data);
       
-      // Echo back or handle message
-      // For now, just echo back for testing
-      ws.send(JSON.stringify({ type: 'echo', data }));
+      // Handle different message types
+      switch (data.type) {
+        case 'ping':
+          ws.send(JSON.stringify({ type: 'pong', data: { timestamp: Date.now() } }));
+          break;
+        case 'echo':
+          ws.send(JSON.stringify({ type: 'echo', data: data.data }));
+          break;
+        default:
+          // Echo back for testing
+          ws.send(JSON.stringify({ type: 'echo', data }));
+      }
       
     } catch (error) {
       console.error('Error parsing message:', error);
+      ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
     }
   });
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+
+  ws.on('close', (code, reason) => {
+    console.log('Client disconnected:', code, reason);
   });
 });
 
@@ -59,6 +79,8 @@ app.post('/api/ai-proxy', async (req, res) => {
   try {
     const { url, method, headers, body } = req.body;
     
+    console.log('AI Proxy Request:', { url, method, headers, body });
+    
     // Only allow specific AI API endpoints
     const allowedUrls = [
       'https://api.deepseek.com/v1/chat/completions',
@@ -66,16 +88,21 @@ app.post('/api/ai-proxy', async (req, res) => {
     ];
     
     if (!allowedUrls.some(allowed => url.startsWith(allowed))) {
+      console.log('URL not allowed:', url);
       return res.status(400).json({ error: 'URL not allowed' });
     }
     
+    console.log('Making request to:', url);
     const response = await fetch(url, {
       method: method || 'POST',
       headers: headers || { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
     
+    console.log('External API response status:', response.status);
     const data = await response.json();
+    console.log('External API response data:', data);
+    
     res.json(data);
     
   } catch (error) {
