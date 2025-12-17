@@ -20,6 +20,7 @@
         </div>
         <div class="controls">
             <button id="create-meeting-btn">Create Meeting</button>
+            <button id="knowledge-base-btn">Knowledge Base</button>
             <button id="api-config-btn">API Config</button>
             <button id="debug-settings-btn">Debug</button>
             <button id="theme-toggle">Theme</button>
@@ -58,16 +59,121 @@
             <div id="questions-list"></div>
             <button id="generate-questions-btn">Generate Questions</button>
         </section>
-
-        <section id="practice-area">
-            <h2>Practice</h2>
-            <button id="practice-mode-btn">Toggle Practice Mode</button>
-            <button id="start-practice-btn">Start Practice</button>
-            <button id="record-answer-btn">Record Answer</button>
-            <button id="test-pip-btn" style="background: #4da6ff; color: white; margin-left: 10px;">Test PIP Readability</button>
-            <div id="practice-feedback"></div>
-        </section>
     </main>
+
+</div>
+
+    <div id="knowledge-base-panel" class="hidden">
+        <div class="panel-content">
+            <h2>Knowledge Base Template Editor</h2>
+            <div class="template-info">
+                <p>Customize the template used for generating interview questions. This template will be used when you click "Generate Questions".</p>
+            </div>
+            <form id="knowledge-base-form">
+                <!-- Template Management Section -->
+                <div class="template-management">
+                    <h3>📝 Template Management</h3>
+                    <div class="form-group">
+                        <label for="template-name">Template Name</label>
+                        <input type="text" id="template-name" placeholder="Enter template name (e.g., Google Ads Expert, Meta Ads Specialist)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="template-selector">Load Existing Template</label>
+                        <select id="template-selector">
+                            <option value="">-- Select Template --</option>
+                        </select>
+                        <button type="button" id="delete-template-btn" class="danger-btn" style="margin-top: 0.5rem;">Delete Selected</button>
+                    </div>
+                </div>
+
+                <!-- Portfolio Information Section -->
+                <div class="portfolio-section">
+                    <h3>👤 Portfolio Information</h3>
+                    <div class="form-group">
+                        <label for="portfolio-name">Applicant Name</label>
+                        <input type="text" id="portfolio-name" placeholder="Enter applicant's full name">
+                    </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-title">Professional Title</label>
+                    <input type="text" id="portfolio-title" placeholder="e.g., Google Ads Specialist, Digital Marketing Manager">
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-experience">Years of Experience</label>
+                    <input type="number" id="portfolio-experience" min="0" max="50" placeholder="Years of experience">
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-budget">Budget Managed</label>
+                    <input type="text" id="portfolio-budget" placeholder="e.g., $10,000/month, $500K annually">
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-specialization">Specialization</label>
+                    <input type="text" id="portfolio-specialization" placeholder="e.g., Local lead generation, E-commerce, Service-based businesses">
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-certifications">Certifications</label>
+                    <textarea id="portfolio-certifications" rows="3" placeholder="List relevant certifications (one per line)"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-achievements">Key Achievements</label>
+                    <textarea id="portfolio-achievements" rows="4" placeholder="List key achievements and metrics (one per line)"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio-skills">Core Skills</label>
+                    <textarea id="portfolio-skills" rows="3" placeholder="List core competencies (one per line)"></textarea>
+                </div>
+                </div>
+
+                <!-- Template Content Section -->
+                <div class="form-group">
+                    <label for="template-content">Template Content</label>
+                    <textarea id="template-content" rows="10" placeholder="Enter your template here..."></textarea>
+                    <div class="template-hints">
+                        <p><strong>Template Variables:</strong></p>
+                        <ul>
+                            <li><code>{context}</code> - Current transcription context</li>
+                            <li><code>{topic}</code> - Interview topic (Google Ads)</li>
+                            <li><code>{num_questions}</code> - Number of questions to generate</li>
+                            <li><code>{name}</code> - Applicant's name</li>
+                            <li><code>{title}</code> - Professional title</li>
+                            <li><code>{experience}</code> - Years of experience</li>
+                            <li><code>{budget}</code> - Budget managed</li>
+                            <li><code>{specialization}</code> - Specialization area</li>
+                            <li><code>{certifications}</code> - List of certifications</li>
+                            <li><code>{achievements}</code> - Key achievements</li>
+                            <li><code>{skills}</code> - Core skills</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="default-topic">Default Topic</label>
+                    <input type="text" id="default-topic" value="Google Ads" placeholder="Enter default topic">
+                </div>
+                <div class="form-group">
+                    <label for="num-questions">Number of Questions</label>
+                    <input type="number" id="num-questions" value="5" min="1" max="10">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="auto-generate-template-btn">Auto-Generate from Portfolio</button>
+                    <button type="button" id="reset-template-btn">Reset to Default</button>
+                    <button type="button" id="preview-template-btn">Preview</button>
+                    <button type="submit">Save Template</button>
+                </div>
+            </form>
+            <div id="template-preview" class="hidden">
+                <h3>Template Preview</h3>
+                <div id="preview-content"></div>
+            </div>
+        </div>
+    </div>
 
     <div id="api-config-panel" class="hidden">
         <div class="panel-content">
@@ -148,6 +254,7 @@
 
     <!-- Deepgram SDK fallback (primary and only source) -->
     <script src="deepgram-fallback.js"></script>
+    <script src="knowledge-base.js"></script>
     
     <!-- Debug: Verify fallback loaded correctly -->
     <script>

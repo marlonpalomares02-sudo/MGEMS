@@ -7,7 +7,91 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
+const deepgramWss = new WebSocket.Server({ noServer: true });
+
+// Handle WebSocket upgrades
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+
+  if (pathname.startsWith('/api/deepgram-proxy')) {
+    deepgramWss.handleUpgrade(request, socket, head, (ws) => {
+      deepgramWss.emit('connection', ws, request);
+    });
+  } else {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  }
+});
+
+// Deepgram Proxy handling
+deepgramWss.on('connection', (ws, req) => {
+  console.log('Deepgram Proxy connected from:', req.socket.remoteAddress);
+  
+  const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+  if (!deepgramApiKey) {
+    console.error('Deepgram API key not configured on server');
+    ws.close(1008, 'Deepgram API key not configured');
+    return;
+  }
+
+  // Extract query params from req.url
+  const query = req.url.split('?')[1];
+  const deepgramUrl = `wss://api.deepgram.com/v1/listen?${query}`;
+  
+  console.log('Connecting to Deepgram upstream...');
+  
+  const deepgram = new WebSocket(deepgramUrl, {
+    headers: {
+      Authorization: `Token ${deepgramApiKey}`
+    }
+  });
+
+  deepgram.on('open', () => {
+    console.log('Connected to Deepgram upstream');
+  });
+
+  deepgram.on('message', (data) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(data);
+    }
+  });
+
+  deepgram.on('close', (code, reason) => {
+    console.log('Deepgram upstream closed:', code, reason);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.close();
+    }
+  });
+
+  deepgram.on('error', (error) => {
+    console.error('Deepgram upstream error:', error);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.close(1011, 'Deepgram upstream error');
+    }
+  });
+
+  ws.on('message', (data) => {
+    if (deepgram.readyState === WebSocket.OPEN) {
+      deepgram.send(data);
+    }
+  });
+
+  ws.on('close', (code, reason) => {
+    console.log('Client closed proxy connection:', code, reason);
+    if (deepgram.readyState === WebSocket.OPEN) {
+      deepgram.close();
+    }
+  });
+  
+  ws.on('error', (error) => {
+    console.error('Client proxy error:', error);
+    if (deepgram.readyState === WebSocket.OPEN) {
+      deepgram.close();
+    }
+  });
+});
 
 // Middleware
 app.use(cors());

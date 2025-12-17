@@ -28,6 +28,35 @@ body {
     margin-left: 0.5rem;
 }
 
+/* Knowledge Base Button */
+#knowledge-base-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+#knowledge-base-btn:hover {
+    background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+}
+
+#knowledge-base-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+#knowledge-base-btn[aria-expanded="true"] {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
 /* App Header with Tagline */
 .app-header {
     display: flex;
@@ -155,6 +184,272 @@ section {
     flex: 1;
 }
 
+/* Knowledge Base Panel */
+#knowledge-base-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#knowledge-base-panel .panel-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.template-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #4da6ff;
+}
+
+.template-info p {
+    margin: 0;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.template-hints {
+    background: #e3f2fd;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    border-left: 4px solid #2196f3;
+}
+
+.template-hints p {
+    margin: 0 0 0.5rem 0;
+    font-weight: bold;
+    color: #1565c0;
+}
+
+/* Portfolio Information Section */
+.portfolio-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.portfolio-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Template Management Section */
+.template-management {
+    background: #e8f5e8;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #c3e6c3;
+}
+
+.template-management h3 {
+    margin: 0 0 1rem 0;
+    color: #155724;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Auto-generate button */
+#auto-generate-template-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-right: 0.5rem;
+}
+
+#auto-generate-template-btn:hover {
+    background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+}
+
+/* Danger button for delete */
+.danger-btn {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.danger-btn:hover {
+    background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+}
+
+/* Template selector */
+#template-selector {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 1rem;
+    background: white;
+    margin-bottom: 0.5rem;
+}
+
+#template-selector:focus {
+    outline: none;
+    border-color: #4da6ff;
+    box-shadow: 0 0 0 3px rgba(77, 166, 255, 0.1);
+}
+
+/* Portfolio form groups */
+.portfolio-form-group {
+    margin-bottom: 1rem;
+}
+
+.portfolio-form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.portfolio-form-group input,
+.portfolio-form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.portfolio-form-group input:focus,
+.portfolio-form-group textarea:focus {
+    outline: none;
+    border-color: #4da6ff;
+    box-shadow: 0 0 0 3px rgba(77, 166, 255, 0.1);
+}
+
+.template-hints ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.template-hints li {
+    margin-bottom: 0.3rem;
+    color: #0d47a1;
+}
+
+.template-hints code {
+    background: #bbdefb;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #1565c0;
+}
+
+#template-content {
+    min-height: 200px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.form-actions button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.form-actions button[type="submit"] {
+    background: #4da6ff;
+    color: white;
+}
+
+.form-actions button[type="submit"]:hover {
+    background: #3399ff;
+}
+
+#reset-template-btn {
+    background: #6c757d;
+    color: white;
+}
+
+#reset-template-btn:hover {
+    background: #5a6268;
+}
+
+#preview-template-btn {
+    background: #17a2b8;
+    color: white;
+}
+
+#preview-template-btn:hover {
+    background: #138496;
+}
+
+#template-preview {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    margin-top: 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+#template-preview h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+#preview-content {
+    background: white;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    color: #495057;
+}
+
 #loading-overlay {
     position: fixed;
     top: 0;
@@ -223,8 +518,29 @@ section {
     display: flex;
     flex-direction: column;
     padding: 15px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1f1 #f1f1f1;
+}
+
+#pip-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#pip-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#pip-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#pip-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 .pip-transcription-container {
@@ -251,6 +567,23 @@ section {
     word-wrap: break-word;
     letter-spacing: 0.2px;
     text-align: left;
+}
+
+.pip-transcription-text::-webkit-scrollbar {
+    width: 4px;
+}
+
+.pip-transcription-text::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.pip-transcription-text::-webkit-scrollbar-thumb {
+    background: rgba(77, 166, 255, 0.3);
+    border-radius: 2px;
+}
+
+.pip-transcription-text::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 166, 255, 0.5);
 }
 
 .pip-ai-container {

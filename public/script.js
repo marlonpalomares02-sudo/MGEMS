@@ -197,6 +197,7 @@ class WeebAssistantUI {
       topBar: document.querySelector('.top-bar'),
       apiConfigBtn: document.getElementById('api-config-btn'),
       createMeetingBtn: document.getElementById('create-meeting-btn'),
+      knowledgeBaseBtn: document.getElementById('knowledge-base-btn'),
       debugSettingsBtn: document.getElementById('debug-settings-btn'),
       themeToggle: document.getElementById('theme-toggle'),
       
@@ -210,6 +211,31 @@ class WeebAssistantUI {
       deepseekUrlInput: document.getElementById('deepseek-base-url'),
       systemPromptInput: document.getElementById('system-prompt'),
       testApisBtn: document.getElementById('test-apis-btn'),
+      
+      // Knowledge Base Panel
+      knowledgeBasePanel: document.getElementById('knowledge-base-panel'),
+      knowledgeBaseForm: document.getElementById('knowledge-base-form'),
+      templateContentInput: document.getElementById('template-content'),
+      defaultTopicInput: document.getElementById('default-topic'),
+      numQuestionsInput: document.getElementById('num-questions'),
+      resetTemplateBtn: document.getElementById('reset-template-btn'),
+      previewTemplateBtn: document.getElementById('preview-template-btn'),
+      templatePreview: document.getElementById('template-preview'),
+      previewContent: document.getElementById('preview-content'),
+      // Template Management
+      templateNameInput: document.getElementById('template-name'),
+      templateSelector: document.getElementById('template-selector'),
+      deleteTemplateBtn: document.getElementById('delete-template-btn'),
+      autoGenerateTemplateBtn: document.getElementById('auto-generate-template-btn'),
+      // Portfolio Information
+      portfolioNameInput: document.getElementById('portfolio-name'),
+      portfolioTitleInput: document.getElementById('portfolio-title'),
+      portfolioExperienceInput: document.getElementById('portfolio-experience'),
+      portfolioBudgetInput: document.getElementById('portfolio-budget'),
+      portfolioSpecializationInput: document.getElementById('portfolio-specialization'),
+      portfolioCertificationsInput: document.getElementById('portfolio-certifications'),
+      portfolioAchievementsInput: document.getElementById('portfolio-achievements'),
+      portfolioSkillsInput: document.getElementById('portfolio-skills'),
       
       // Screen share
       screenShareMain: document.getElementById('screen-share-main'),
@@ -228,14 +254,6 @@ class WeebAssistantUI {
       questionsArea: document.getElementById('questions-area'),
       questionsList: document.getElementById('questions-list'),
       generateQuestionsBtn: document.getElementById('generate-questions-btn'),
-      
-      // Practice
-      practiceArea: document.getElementById('practice-area'),
-      startPracticeBtn: document.getElementById('start-practice-btn'),
-      recordAnswerBtn: document.getElementById('record-answer-btn'),
-      practiceFeedback: document.getElementById('practice-feedback'),
-      practiceModeBtn: document.getElementById('practice-mode-btn'),
-      testPipBtn: document.getElementById('test-pip-btn'),
       
       // Status
       meetingStatus: document.getElementById('meeting-status'),
@@ -283,6 +301,7 @@ class WeebAssistantUI {
     // Top bar
     this.elements.apiConfigBtn?.addEventListener('click', () => this.toggleApiConfig());
     this.elements.createMeetingBtn?.addEventListener('click', () => this.createMeeting());
+    this.elements.knowledgeBaseBtn?.addEventListener('click', () => this.toggleKnowledgeBase());
     this.elements.themeToggle?.addEventListener('click', () => this.toggleTheme());
     this.elements.debugSettingsBtn?.addEventListener('click', () => this.debugSettings());
     
@@ -308,6 +327,27 @@ class WeebAssistantUI {
     // Test APIs button
     this.elements.testApisBtn?.addEventListener('click', () => this.testApis());
     
+    // Knowledge Base Panel - Enhanced accessibility
+    this.elements.knowledgeBaseForm?.addEventListener('submit', (e) => {
+      console.log('Knowledge base form submitted');
+      e.preventDefault();
+      this.saveTemplate();
+    });
+    
+    // Add keyboard navigation for knowledge base form
+    this.elements.knowledgeBaseForm?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.toggleKnowledgeBase(false);
+      }
+    });
+    
+    // Knowledge Base buttons
+    this.elements.resetTemplateBtn?.addEventListener('click', () => this.resetTemplate());
+    this.elements.previewTemplateBtn?.addEventListener('click', () => this.previewTemplate());
+    this.elements.deleteTemplateBtn?.addEventListener('click', () => this.deleteTemplate());
+    this.elements.autoGenerateTemplateBtn?.addEventListener('click', () => this.autoGenerateTemplate());
+    this.elements.templateSelector?.addEventListener('change', () => this.loadSelectedTemplate());
+    
     // Paste buttons for API keys
     document.getElementById('paste-deepseek-key')?.addEventListener('click', () => this.pasteApiKey('deepseek-api-key'));
     document.getElementById('paste-deepgram-key')?.addEventListener('click', () => this.pasteApiKey('deepgram-api-key'));
@@ -325,10 +365,6 @@ class WeebAssistantUI {
     
     // Applicant Panel
     this.elements.generateQuestionsBtn?.addEventListener('click', () => this.generateQuestions());
-    this.elements.practiceModeBtn?.addEventListener('click', () => this.togglePracticeMode());
-    this.elements.startPracticeBtn?.addEventListener('click', () => this.startPractice());
-    this.elements.recordAnswerBtn?.addEventListener('click', () => this.recordAnswer());
-    this.elements.testPipBtn?.addEventListener('click', () => this.testPipReadability());
     
     // PiP Overlay
     this.elements.pipCloseBtn?.addEventListener('click', () => this.hidePiP());
@@ -888,10 +924,10 @@ class WeebAssistantUI {
   }
 
   updateConfigStatusIndicator() {
-    const statusIndicator = document.getElementById('config-status-indicator');
+    const _statusIndicator = document.getElementById('config-status-indicator');
     const apiConfigBtn = this.elements.apiConfigBtn;
     
-    if (!statusIndicator || !apiConfigBtn) return;
+    if (!_statusIndicator || !apiConfigBtn) return;
     
     // Check if any API keys are configured
     const hasDeepseekKey = this.config.deepseekApiKey && this.config.deepseekApiKey.length > 0;
@@ -901,19 +937,19 @@ class WeebAssistantUI {
     const totalConfigured = [hasDeepseekKey, hasDeepgramKey, hasGeminiKey].filter(Boolean).length;
     
     if (totalConfigured === 3) {
-      statusIndicator.textContent = '✅';
-      statusIndicator.className = 'config-indicator config-status-valid';
-      statusIndicator.title = 'All API keys configured';
+      _statusIndicator.textContent = '✅';
+      _statusIndicator.className = 'config-indicator config-status-valid';
+      _statusIndicator.title = 'All API keys configured';
       apiConfigBtn.title = 'All API keys configured - Click to modify';
     } else if (totalConfigured > 0) {
-      statusIndicator.textContent = '⚠️';
-      statusIndicator.className = 'config-indicator';
-      statusIndicator.title = `${totalConfigured} of 3 API keys configured`;
+      _statusIndicator.textContent = '⚠️';
+      _statusIndicator.className = 'config-indicator';
+      _statusIndicator.title = `${totalConfigured} of 3 API keys configured`;
       apiConfigBtn.title = `${totalConfigured} of 3 API keys configured - Click to complete setup`;
     } else {
-      statusIndicator.textContent = '❌';
-      statusIndicator.className = 'config-indicator config-status-invalid';
-      statusIndicator.title = 'No API keys configured';
+      _statusIndicator.textContent = '❌';
+      _statusIndicator.className = 'config-indicator config-status-invalid';
+      _statusIndicator.title = 'No API keys configured';
       apiConfigBtn.title = 'No API keys configured - Click to set up required APIs';
     }
   }
@@ -1021,6 +1057,489 @@ class WeebAssistantUI {
     
     // Show notification with debug info
     this.showNotification('Settings panel debug info logged to console', 'info');
+  }
+
+  // ===== KNOWLEDGE BASE PANEL =====
+  
+  toggleKnowledgeBase(show = null) {
+    const panel = this.elements.knowledgeBasePanel;
+    const button = this.elements.knowledgeBaseBtn;
+    
+    console.log('toggleKnowledgeBase called, panel exists:', !!panel, 'button exists:', !!button);
+    
+    if (!panel || !button) {
+      console.error('Knowledge Base panel or button not found');
+      return;
+    }
+    
+    let isOpen;
+    if (show === null) {
+      isOpen = panel.classList.contains('hidden');
+    } else {
+      isOpen = show;
+    }
+    
+    console.log('Toggling Knowledge Base panel, isOpen:', isOpen);
+    
+    if (isOpen) {
+      panel.classList.remove('hidden');
+      button.setAttribute('aria-expanded', 'true');
+      this.announceToScreenReader('Knowledge Base template editor opened');
+      // Load current template when opening
+      this.updateKnowledgeBaseUI();
+      // Focus on template content for better UX
+      setTimeout(() => {
+        if (this.elements.templateContentInput) this.elements.templateContentInput.focus();
+      }, 100);
+    } else {
+      panel.classList.add('hidden');
+      button.setAttribute('aria-expanded', 'false');
+      this.announceToScreenReader('Knowledge Base template editor closed');
+    }
+  }
+  
+  saveTemplate() {
+    console.log('saveTemplate called');
+    try {
+      // Get form values
+      const templateName = this.elements.templateNameInput?.value?.trim();
+      const templateContent = this.elements.templateContentInput?.value?.trim();
+      const defaultTopic = this.elements.defaultTopicInput?.value?.trim();
+      const numQuestions = parseInt(this.elements.numQuestionsInput?.value) || 5;
+      
+      console.log('Template values:', { templateName, templateContent, defaultTopic, numQuestions });
+      
+      // Basic validation
+      if (!templateName) {
+        this.showNotification('Template name is required', 'error');
+        this.elements.templateNameInput?.focus();
+        return;
+      }
+      
+      if (!templateContent) {
+        this.showNotification('Template content is required', 'error');
+        this.elements.templateContentInput?.focus();
+        return;
+      }
+      
+      if (!defaultTopic) {
+        this.showNotification('Default topic is required', 'error');
+        this.elements.defaultTopicInput?.focus();
+        return;
+      }
+      
+      if (numQuestions < 1 || numQuestions > 10) {
+        this.showNotification('Number of questions must be between 1 and 10', 'error');
+        this.elements.numQuestionsInput?.focus();
+        return;
+      }
+      
+      // Collect portfolio information
+      const portfolio = {
+        name: this.elements.portfolioNameInput?.value?.trim() || '',
+        title: this.elements.portfolioTitleInput?.value?.trim() || '',
+        experience: this.elements.portfolioExperienceInput?.value?.trim() || '',
+        budget: this.elements.portfolioBudgetInput?.value?.trim() || '',
+        specialization: this.elements.portfolioSpecializationInput?.value?.trim() || '',
+        certifications: this.elements.portfolioCertificationsInput?.value?.trim() || '',
+        achievements: this.elements.portfolioAchievementsInput?.value?.trim() || '',
+        skills: this.elements.portfolioSkillsInput?.value?.trim() || ''
+      };
+      
+      // Save template configuration with portfolio
+      const templateConfig = {
+        name: templateName,
+        content: templateContent,
+        defaultTopic: defaultTopic,
+        numQuestions: numQuestions,
+        portfolio: portfolio,
+        lastModified: new Date().toISOString()
+      };
+      
+      // Save with new naming system
+      const templateKey = `weeb-assistant-template-${templateName}`;
+      localStorage.setItem(templateKey, JSON.stringify(templateConfig));
+      
+      // Update UI
+      this.toggleKnowledgeBase(false);
+      this.showNotification('Template saved successfully', 'success');
+      this.announceToScreenReader('Template configuration saved');
+      
+      console.log('Template configuration saved:', templateConfig);
+      
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      this.showNotification('Failed to save template', 'error');
+      this.announceToScreenReader('Error saving template');
+    }
+  }
+  
+  resetTemplate() {
+    console.log('resetTemplate called');
+    
+    // Google Ads Expert System Prompt Template
+    const defaultTemplate = `You are a Google Ads, SEO, Meta Ads (Facebook & Instagram), Google Tag Manager, keyword research, campaign optimization, Google Analytics, and Go High Level expert.
+
+You help local businesses like junk removal, roofing, car detailing, plumbers, electricians, and ecommerce brands get more leads, more calls, more bookings, and better local visibility using smart ads and search strategies.
+
+HOW TO ANSWER EVERY INTERVIEW QUESTION OR TOPIC:
+
+✅ Use short, clear answers
+🧠 Explain things in simple words a 5th grader can understand
+🧩 Give real examples for the business type being discussed
+  - Junk removal → phone calls & quote requests
+  - Roofing → inspections & storm leads
+  - Car detailing → booking forms & repeat customers
+  - Ecommerce → sales & cart checkouts
+🚫 Avoid marketing jargon or fancy terms
+💬 Sound casual, friendly, and helpful
+😊 Keep the tone positive and human
+🙋 If you don't know something, say it honestly and offer to look it up
+
+CANDIDATE PORTFOLIO - {name}:
+- {title} with {experience} years managing U.S. client campaigns
+- Currently managing {budget} Google Ads budget generating high-value leads
+- Specializes in {specialization}
+- Certified in Google Search, Display, Video, Shopping Ads, and Analytics
+- Proficient in GoHighLevel for lead nurturing funnels and automation
+- Direct U.S. client experience with proven ad copy that resonates with American audiences
+- Expertise in maximizing ad spend to reach highly motivated searchers
+
+CORE COMPETENCIES:
+{certifications}
+Google Ads Management, Keyword Research, Campaign Optimization, Meta Ads Strategy, Ad Copywriting, Performance Analysis, Conversion Tracking, Google Tag Manager, GoHighLevel Basics, Client Communication
+
+KEY ACHIEVEMENTS:
+{achievements}
+
+CORE SKILLS:
+{skills}
+
+MAIN GOAL:
+Help local business owners understand marketing fast and see how it makes them more money.
+
+INTERVIEW CONTEXT: "{context}"
+
+TOPIC FOCUS: {topic}
+
+INSTRUCTIONS:
+1. Generate {num_questions} common Google Ads interview questions relevant to {topic}
+2. For each question, provide an impressive sample answer that highlights {name}'s specific experience and achievements
+3. Focus on positioning them as an expert who can deliver results for local businesses
+4. Emphasize their training, certifications, and proven track record with specific business types
+5. Include real scenarios and metrics where relevant
+6. Use simple language that business owners can understand
+7. Show how their expertise translates to more leads, calls, and bookings
+
+Return a numbered list with each question followed by a compelling sample answer that demonstrates expertise in getting local businesses more customers.`;
+    
+    if (this.elements.templateContentInput) {
+      this.elements.templateContentInput.value = defaultTemplate;
+    }
+    if (this.elements.defaultTopicInput) {
+      this.elements.defaultTopicInput.value = 'Google Ads Portfolio Interview';
+    }
+    if (this.elements.numQuestionsInput) {
+      this.elements.numQuestionsInput.value = '5';
+    }
+    
+    this.showNotification('Template reset to default', 'info');
+  }
+  
+  previewTemplate() {
+    console.log('previewTemplate called');
+    
+    const templateContent = this.elements.templateContentInput?.value?.trim();
+    const defaultTopic = this.elements.defaultTopicInput?.value?.trim() || 'Google Ads';
+    const numQuestions = parseInt(this.elements.numQuestionsInput?.value) || 5;
+    
+    if (!templateContent) {
+      this.showNotification('Please enter template content first', 'error');
+      this.elements.templateContentInput?.focus();
+      return;
+    }
+    
+    // Get portfolio information for preview
+    const portfolio = {
+      name: this.elements.portfolioNameInput?.value?.trim() || 'Marlon Palomares',
+      title: this.elements.portfolioTitleInput?.value?.trim() || 'Google Ads Specialist',
+      experience: this.elements.portfolioExperienceInput?.value?.trim() || '2+',
+      budget: this.elements.portfolioBudgetInput?.value?.trim() || '$10,000/month',
+      specialization: this.elements.portfolioSpecializationInput?.value?.trim() || 'Local lead generation',
+      certifications: this.elements.portfolioCertificationsInput?.value?.trim() || 'Google Search, Display, Video Ads Certified',
+      achievements: this.elements.portfolioAchievementsInput?.value?.trim() || 'Managed substantial budgets with consistent lead generation',
+      skills: this.elements.portfolioSkillsInput?.value?.trim() || 'Google Ads, Campaign Optimization, Performance Analysis'
+    };
+    
+    // Create a preview with sample values
+    const sampleContext = 'The candidate has been discussing their experience with PPC campaigns and budget management';
+    const preview = templateContent
+      .replace(/\{context\}/g, sampleContext)
+      .replace(/\{topic\}/g, defaultTopic)
+      .replace(/\{num_questions\}/g, numQuestions)
+      .replace(/\{name\}/g, portfolio.name)
+      .replace(/\{title\}/g, portfolio.title)
+      .replace(/\{experience\}/g, portfolio.experience)
+      .replace(/\{budget\}/g, portfolio.budget)
+      .replace(/\{specialization\}/g, portfolio.specialization)
+      .replace(/\{certifications\}/g, portfolio.certifications)
+      .replace(/\{achievements\}/g, portfolio.achievements)
+      .replace(/\{skills\}/g, portfolio.skills);
+    
+    // Show preview
+    if (this.elements.previewContent) {
+      this.elements.previewContent.textContent = preview;
+    }
+    
+    if (this.elements.templatePreview) {
+      this.elements.templatePreview.classList.remove('hidden');
+    }
+    
+    this.showNotification('Template preview generated', 'info');
+  }
+  
+  updateKnowledgeBaseUI() {
+    console.log('Updating Knowledge Base UI');
+    
+    // Load saved template or use default
+    const savedTemplate = localStorage.getItem('weeb-assistant-template');
+    let templateConfig;
+    
+    if (savedTemplate) {
+      templateConfig = JSON.parse(savedTemplate);
+    } else {
+      // Default template with Marlon's portfolio
+      templateConfig = {
+        content: `You are an expert Google Ads interviewer. Generate {num_questions} advanced interview questions and provide impressive sample answers based on the candidate's portfolio:
+
+CANDIDATE PORTFOLIO - MARLON PALOMARES:
+- Google Ads Specialist with 2+ years managing U.S. client campaigns
+- Currently managing $10,000/month Google Ads budget generating high-value leads
+- Trained by Ian Baillo (Philippines' top Google Ads expert) in advanced local lead generation
+- Specializes in service-based businesses: junk removal, plumbing, and local services
+- Certified in Google Search, Display, Video, Shopping Ads, and Analytics
+- Proficient in GoHighLevel (GHL) for lead nurturing funnels and automation
+- 2 years direct U.S. client experience with proven ad copy that resonates with American audiences
+- Expertise in maximizing ad spend to reach highly motivated searchers
+
+CORE COMPETENCIES:
+Google Ads Management, Keyword Research, Campaign Optimization, Meta Ads Strategy, Ad Copywriting, Performance Analysis, Conversion Tracking, Google Tag Manager, GoHighLevel Basics, Client Communication
+
+KEY ACHIEVEMENTS:
+- Successfully managed substantial Google Ads budgets with consistent lead generation
+- Mentored by industry-leading Google Ads authority in Philippines
+- Proven track record with U.S. service-based business campaigns
+- Advanced training in local lead generation strategies
+
+INTERVIEW CONTEXT: "{context}"
+
+TOPIC FOCUS: {topic}
+
+INSTRUCTIONS:
+1. Generate {num_questions} common Google Ads interview questions
+2. For each question, provide an impressive sample answer that highlights Marlon's specific experience and achievements
+3. Focus on positioning him as an expert who can deliver results for service-based businesses
+4. Emphasize his training, certifications, and proven track record
+5. Include specific metrics and achievements where relevant
+
+Return a numbered list with each question followed by a compelling sample answer.`,
+        defaultTopic: 'Google Ads Portfolio Interview',
+        numQuestions: 5,
+        lastModified: new Date().toISOString()
+      };
+    }
+    
+    if (this.elements.templateContentInput) {
+      this.elements.templateContentInput.value = templateConfig.content;
+    }
+    if (this.elements.defaultTopicInput) {
+      this.elements.defaultTopicInput.value = templateConfig.defaultTopic;
+    }
+    if (this.elements.numQuestionsInput) {
+      this.elements.numQuestionsInput.value = templateConfig.numQuestions;
+    }
+    
+    // Hide preview initially
+    if (this.elements.templatePreview) {
+      this.elements.templatePreview.classList.add('hidden');
+    }
+    
+    // Update template selector
+    this.updateTemplateSelector();
+  }
+
+  // Template Management Functions
+  updateTemplateSelector() {
+    const selector = this.elements.templateSelector;
+    if (!selector) return;
+    
+    // Clear existing options except the first one
+    while (selector.options.length > 1) {
+      selector.remove(1);
+    }
+    
+    // Load all saved templates
+    const templates = this.getAllTemplates();
+    Object.keys(templates).forEach(templateName => {
+      const option = document.createElement('option');
+      option.value = templateName;
+      option.textContent = templateName;
+      selector.appendChild(option);
+    });
+  }
+
+  getAllTemplates() {
+    const templates = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('weeb-assistant-template-')) {
+        const templateName = key.replace('weeb-assistant-template-', '');
+        try {
+          templates[templateName] = JSON.parse(localStorage.getItem(key));
+        } catch (e) {
+          console.error('Error parsing template:', key, e);
+        }
+      }
+    }
+    return templates;
+  }
+
+  loadSelectedTemplate() {
+    const selector = this.elements.templateSelector;
+    const templateName = selector?.value;
+    
+    if (!templateName) return;
+    
+    const templateKey = `weeb-assistant-template-${templateName}`;
+    const templateData = localStorage.getItem(templateKey);
+    
+    if (templateData) {
+      try {
+        const template = JSON.parse(templateData);
+        this.loadTemplateToUI(template);
+        this.showNotification(`Loaded template: ${templateName}`, 'info');
+      } catch (e) {
+        this.showNotification('Error loading template', 'error');
+      }
+    }
+  }
+
+  deleteTemplate() {
+    const selector = this.elements.templateSelector;
+    const templateName = selector?.value;
+    
+    if (!templateName) {
+      this.showNotification('Please select a template to delete', 'error');
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete the template "${templateName}"?`)) {
+      const templateKey = `weeb-assistant-template-${templateName}`;
+      localStorage.removeItem(templateKey);
+      this.updateTemplateSelector();
+      this.showNotification(`Template "${templateName}" deleted`, 'info');
+    }
+  }
+
+  autoGenerateTemplate() {
+    console.log('Auto-generating template from portfolio');
+    
+    // Get portfolio information
+    const name = this.elements.portfolioNameInput?.value?.trim() || 'Candidate';
+    const title = this.elements.portfolioTitleInput?.value?.trim() || 'Digital Marketing Specialist';
+    const experience = this.elements.portfolioExperienceInput?.value?.trim() || '2+';
+    const budget = this.elements.portfolioBudgetInput?.value?.trim() || 'substantial';
+    const specialization = this.elements.portfolioSpecializationInput?.value?.trim() || 'Google Ads management';
+    const certifications = this.elements.portfolioCertificationsInput?.value?.trim() || 'Google Ads certified';
+    const achievements = this.elements.portfolioAchievementsInput?.value?.trim() || 'Proven track record in campaign optimization';
+    const skills = this.elements.portfolioSkillsInput?.value?.trim() || 'Google Ads, Campaign Optimization, Performance Analysis';
+    
+    // Auto-generate template with Google Ads Expert System Prompt
+    const autoGeneratedTemplate = `You are a Google Ads, SEO, Meta Ads (Facebook & Instagram), Google Tag Manager, keyword research, campaign optimization, Google Analytics, and Go High Level expert.
+
+You help local businesses like junk removal, roofing, car detailing, plumbers, electricians, and ecommerce brands get more leads, more calls, more bookings, and better local visibility using smart ads and search strategies.
+
+HOW TO ANSWER EVERY INTERVIEW QUESTION OR TOPIC:
+
+✅ Use short, clear answers
+🧠 Explain things in simple words a 5th grader can understand
+🧩 Give real examples for the business type being discussed
+  - Junk removal → phone calls & quote requests
+  - Roofing → inspections & storm leads
+  - Car detailing → booking forms & repeat customers
+  - Ecommerce → sales & cart checkouts
+🚫 Avoid marketing jargon or fancy terms
+💬 Sound casual, friendly, and helpful
+😊 Keep the tone positive and human
+🙋 If you don't know something, say it honestly and offer to look it up
+
+CANDIDATE PORTFOLIO - ${name.toUpperCase()}:
+- ${title} with ${experience} years managing U.S. client campaigns
+- Currently managing ${budget} Google Ads budget generating high-value leads
+- Specializes in ${specialization}
+- Certified in: ${certifications}
+- Key achievements: ${achievements}
+- Core skills: ${skills}
+
+CORE COMPETENCIES:
+${skills}
+
+KEY ACHIEVEMENTS:
+${achievements}
+
+MAIN GOAL:
+Help local business owners understand marketing fast and see how it makes them more money.
+
+INTERVIEW CONTEXT: "{context}"
+
+TOPIC FOCUS: {topic}
+
+INSTRUCTIONS:
+1. Generate {num_questions} common Google Ads interview questions relevant to {topic}
+2. For each question, provide an impressive sample answer that highlights ${name}'s specific experience and achievements
+3. Focus on positioning them as an expert who can deliver results for local businesses
+4. Emphasize their training, certifications, and proven track record with specific business types
+5. Include real scenarios and metrics where relevant
+6. Use simple language that business owners can understand
+7. Show how their expertise translates to more leads, calls, and bookings
+
+Return a numbered list with each question followed by a compelling sample answer that demonstrates expertise in getting local businesses more customers.`;
+
+    // Fill in the template content
+    if (this.elements.templateContentInput) {
+      this.elements.templateContentInput.value = autoGeneratedTemplate;
+    }
+    
+    // Set default topic
+    if (this.elements.defaultTopicInput) {
+      this.elements.defaultTopicInput.value = `${specialization} Interview`;
+    }
+    
+    this.showNotification('Template auto-generated from portfolio information', 'success');
+  }
+
+  loadTemplateToUI(template) {
+    if (this.elements.templateContentInput) {
+      this.elements.templateContentInput.value = template.content || '';
+    }
+    if (this.elements.defaultTopicInput) {
+      this.elements.defaultTopicInput.value = template.defaultTopic || 'Digital Marketing';
+    }
+    if (this.elements.numQuestionsInput) {
+      this.elements.numQuestionsInput.value = template.numQuestions || 5;
+    }
+    
+    // Load portfolio information if available
+    if (template.portfolio) {
+      if (this.elements.portfolioNameInput) this.elements.portfolioNameInput.value = template.portfolio.name || '';
+      if (this.elements.portfolioTitleInput) this.elements.portfolioTitleInput.value = template.portfolio.title || '';
+      if (this.elements.portfolioExperienceInput) this.elements.portfolioExperienceInput.value = template.portfolio.experience || '';
+      if (this.elements.portfolioBudgetInput) this.elements.portfolioBudgetInput.value = template.portfolio.budget || '';
+      if (this.elements.portfolioSpecializationInput) this.elements.portfolioSpecializationInput.value = template.portfolio.specialization || '';
+      if (this.elements.portfolioCertificationsInput) this.elements.portfolioCertificationsInput.value = template.portfolio.certifications || '';
+      if (this.elements.portfolioAchievementsInput) this.elements.portfolioAchievementsInput.value = template.portfolio.achievements || '';
+      if (this.elements.portfolioSkillsInput) this.elements.portfolioSkillsInput.value = template.portfolio.skills || '';
+    }
   }
 
   startTranscription() {
@@ -1163,7 +1682,6 @@ class WeebAssistantUI {
       // Request screen sharing with audio
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: true, // Enable audio capture
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
@@ -1413,7 +1931,7 @@ class WeebAssistantUI {
         console.log('✅ Deepgram SDK found in window.Deepgram');
       }
       // Check for Deepgram as a global variable
-      else if (typeof Deepgram !== 'undefined') {
+      else if (typeof window.Deepgram !== 'undefined') {
         deepgramConstructor = Deepgram;
         deepgramAvailable = true;
         console.log('✅ Deepgram SDK found as global Deepgram');
@@ -1498,7 +2016,11 @@ class WeebAssistantUI {
   // Fallback manual WebSocket implementation
   startDeepgramStreamFallback() {
     const deepgramApiKey = this.config.deepgramApiKey;
-    if (!deepgramApiKey) return;
+    if (!deepgramApiKey || deepgramApiKey === 'your_deepgram_api_key_here') {
+      console.error('❌ Deepgram API key not configured');
+      this.showNotification('Please configure your Deepgram API key in settings', 'error');
+      return;
+    }
     
     console.log('Connecting to Deepgram streaming (fallback)...');
     
@@ -1506,14 +2028,29 @@ class WeebAssistantUI {
       const deepgramUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&diarize=true&punctuate=true&utterances=true&encoding=linear16&sample_rate=16000&channels=1`;
     
     try {
-      this.state.deepgramSocket = new WebSocket(deepgramUrl, ['token', deepgramApiKey]);
+      // Deepgram requires token parameter in URL for browser WebSocket connections
+      const authenticatedUrl = `${deepgramUrl}&token=${encodeURIComponent(deepgramApiKey)}`;
+      console.log('Connecting to Deepgram with authenticated URL:', authenticatedUrl.split('&token=')[0] + '&token=...');
+      
+      try {
+        this.state.deepgramSocket = new WebSocket(authenticatedUrl);
+        console.log('Attempting direct WebSocket connection to Deepgram');
+      } catch (wsError) {
+        console.warn('Direct WebSocket connection failed, using proxy:', wsError.message);
+        // Fallback to local proxy
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const proxyUrl = `${protocol}//${host}/api/deepgram-proxy?model=nova-2&language=en-US&smart_format=true&diarize=true&punctuate=true&utterances=true&encoding=linear16&sample_rate=16000&channels=1`;
+        this.state.deepgramSocket = new WebSocket(proxyUrl);
+        console.log('Using local proxy for Deepgram connection');
+      }
       
       // Set connection timeout
       const connectionTimeout = setTimeout(() => {
         if (this.state.deepgramSocket.readyState !== WebSocket.OPEN) {
           console.error('Deepgram WebSocket connection timeout');
           this.state.deepgramSocket.close();
-          this.showNotification('Deepgram connection timeout - check your API key', 'error');
+          this.showNotification('Deepgram connection timeout - check your API key and network connection', 'error');
         }
       }, 10000); // 10 second timeout
       
@@ -1539,7 +2076,15 @@ class WeebAssistantUI {
       
       this.state.deepgramSocket.onerror = (error) => {
         console.error('Deepgram WebSocket error (fallback):', error);
-        this.showNotification('Deepgram transcription service error', 'error');
+        console.error('WebSocket readyState:', this.state.deepgramSocket.readyState);
+        console.error('WebSocket URL:', this.state.deepgramSocket.url?.split('&token=')[0] + '&token=...');
+        
+        let errorMessage = 'Deepgram transcription service error';
+        if (error.target && error.target.readyState === WebSocket.CLOSED) {
+          errorMessage = 'Deepgram connection failed - check API key and network';
+        }
+        
+        this.showNotification(errorMessage, 'error');
         // Try to reconnect after a delay
         setTimeout(() => {
           if (this.state.isTranscribingScreen) {
@@ -1651,7 +2196,6 @@ class WeebAssistantUI {
       
       let currentSpeaker = null;
       let transcript = '';
-      let speakerStart = 0;
       
       for (let i = 0; i < words.length; i++) {
         const word = words[i];
@@ -1671,7 +2215,6 @@ class WeebAssistantUI {
           
           let speakerLabel = currentSpeaker === 0 ? 'INTERVIEWER' : `Speaker ${speakerNumber}`;
           transcript += `<span style="color: ${color}; font-weight: bold;">${speakerLabel}: </span>`;
-          speakerStart = i;
         }
         
         // Add the word
@@ -1805,7 +2348,7 @@ class WeebAssistantUI {
   }
 
   // New function to setup audio processing for microphone (simplified)
-  async setupMicrophoneAudioProcessing(audioContext, source, stream) {
+  async setupMicrophoneAudioProcessing(audioContext, source, _stream) {
     try {
       console.log('Setting up microphone audio processing with ScriptProcessorNode...');
       
@@ -1945,67 +2488,7 @@ class WeebAssistantUI {
     }
   }
   
-  // Mock transcription generator for testing without Deepgram API key
-  generateMockTranscription() {
-    try {
-      // Only generate mock transcription occasionally to avoid spam
-      if (!this.state.lastMockTranscriptionTime) {
-        this.state.lastMockTranscriptionTime = Date.now();
-      }
-      
-      const now = Date.now();
-      const timeSinceLastMock = now - this.state.lastMockTranscriptionTime;
-      
-      // Generate mock transcription every 3-5 seconds
-      if (timeSinceLastMock < 3000 + Math.random() * 2000) {
-        return;
-      }
-      
-      this.state.lastMockTranscriptionTime = now;
-      
-      // Mock interview responses that would be relevant for screen sharing
-      const mockTranscriptions = [
-        "This is a test of the screen sharing audio transcription system.",
-        "The audio is being captured and processed successfully.",
-        "Screen sharing audio transcription is working correctly.",
-        "Testing the real-time audio processing functionality.",
-        "The system is capturing audio from the screen share.",
-        "Audio transcription test - everything appears to be functioning.",
-        "Mock transcription: Screen audio capture is operational.",
-        "Testing audio levels and transcription quality.",
-        "The transcription system is ready for real content."
-      ];
-      
-      const randomTranscription = mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)];
-      
-      // Create mock Deepgram response data
-      const mockData = {
-        type: 'Results',
-        channel: {
-          alternatives: [{
-            transcript: randomTranscription,
-            confidence: 0.95,
-            words: randomTranscription.split(' ').map((word, index) => ({
-              word: word,
-              start: index * 0.5,
-              end: (index + 1) * 0.5,
-              confidence: 0.95,
-              speaker: 0
-            }))
-          }]
-        },
-        duration: 3.0,
-        is_final: true,
-        speech_final: true
-      };
-      
-      console.log('Mock transcription generated:', randomTranscription);
-      this.displayTranscription(randomTranscription, mockData);
-      
-    } catch (error) {
-      console.error('Error generating mock transcription:', error);
-    }
-  }
+  
   
   displayTranscription(transcript, data) {
     try {
@@ -2237,12 +2720,32 @@ class WeebAssistantUI {
     container.appendChild(suggestionDiv);
     
     try {
-      const prompt = `You are a helpful interview assistant. Analyze this statement: "${question}". 
+      let prompt = `You are a helpful interview assistant. Analyze this statement: "${question}". 
       
       If it's a question: Provide a short, natural, confident answer under 50 words.
       If it's a statement: Provide a relevant follow-up comment or question under 50 words.
       
       Keep it conversational and professional. Sound confident but humble.`;
+
+      // Inject Knowledge Base if available
+      if (window.KNOWLEDGE_BASE) {
+        prompt = `
+          You are acting as the candidate described in the following profile. 
+          Use the profile information to answer the interviewer's question or statement confidentially and professionally.
+          
+          PROFILE KNOWLEDGE BASE:
+          ${window.KNOWLEDGE_BASE}
+          
+          INTERVIEWER STATEMENT/QUESTION: "${question}"
+          
+          INSTRUCTIONS:
+          - If it's a question about experience/skills: Answer directly using facts from the profile.
+          - If it's a general question: Answer as a Google Ads Specialist with this background.
+          - Keep answers concise (under 60 words) and natural (spoken English).
+          - Do not invent facts not in the profile.
+          - If the information is not in the profile, answer generally based on Google Ads best practices but mention your specific experience (e.g., "In my experience with US clients...").
+        `;
+      }
       
       const answer = await this.callAI(prompt);
       
@@ -2460,19 +2963,102 @@ class WeebAssistantUI {
     }
   }
 
-  generateQuestions() {
-    if (this.websocket?.readyState === WebSocket.OPEN) {
-      this.showLoading('Generating smart questions...');
-      this.websocket.send(JSON.stringify({
-        type: 'generate_questions',
-        data: {
-          context: this.elements.transcriptionArea?.textContent || '',
-          count: 5
-        }
-      }));
+  async generateQuestions() {
+    this.showLoading('Generating smart questions...');
+    
+    // Load the custom template from Knowledge Base
+    const savedTemplate = localStorage.getItem('weeb-assistant-template');
+    let templateConfig;
+    
+    if (savedTemplate) {
+      templateConfig = JSON.parse(savedTemplate);
     } else {
-      this.showNotification('Not connected to server', 'error');
+      // Default template if none saved
+      templateConfig = {
+        content: `You are an expert Google Ads interviewer. 
+Generate {num_questions} advanced interview questions focusing on the following topics:
+1. Google Ads Campaign Strategy
+2. Campaign Optimization
+3. Bidding Strategies
+4. Campaign Budget Management
+
+Context from current interview: "{context}"
+
+Topic focus: {topic}
+
+Return ONLY a numbered list of {num_questions} questions. Do not include introductory text.`,
+        defaultTopic: 'Google Ads',
+        numQuestions: 5
+      };
     }
+    
+    const context = this.elements.interviewerTranscription?.textContent || '';
+    const topic = templateConfig.defaultTopic || 'Google Ads';
+    const numQuestions = templateConfig.numQuestions || 5;
+    
+    // Replace template variables with actual values
+    const prompt = templateConfig.content
+      .replace(/\{context\}/g, context.substring(0, 500))
+      .replace(/\{topic\}/g, topic)
+      .replace(/\{num_questions\}/g, numQuestions);
+
+    try {
+      const response = await this.callAI(prompt);
+      
+      // Parse the response into a list of questions
+      const questions = response.split(/\n/)
+        .filter(line => line.match(/^\d+\./))
+        .map(line => {
+          const text = line.replace(/^\d+\.\s*/, '').trim();
+          return { text, category: topic };
+        });
+
+      if (questions.length === 0) {
+        // Fallback if parsing fails
+        questions.push({ text: response, category: topic });
+      }
+
+      this.handleQuestionGenerated({ questions });
+      
+      // Also inject the first question into the transcription as if the interviewer asked it
+      if (questions.length > 0) {
+        this.addInterviewerQuestionToTranscription(questions[0].text);
+      }
+      
+    } catch (error) {
+      console.error('Failed to generate questions:', error);
+      this.showNotification('Failed to generate questions. Please check API keys.', 'error');
+      this.hideLoading();
+    }
+  }
+
+  addInterviewerQuestionToTranscription(questionText) {
+    const transcriptionArea = this.elements.interviewerTranscription;
+    if (!transcriptionArea) return;
+
+    const entry = document.createElement('div');
+    entry.className = 'transcription-entry ai-interviewer';
+    entry.style.marginBottom = '8px';
+    entry.style.padding = '8px';
+    entry.style.backgroundColor = '#e3f2fd'; // Light blue for AI interviewer
+    entry.style.borderRadius = '4px';
+    entry.style.borderLeft = '4px solid #2196f3';
+    entry.dataset.createdAt = Date.now();
+
+    const timestamp = new Date().toLocaleTimeString();
+    entry.innerHTML = `
+      <div style="font-weight: bold; color: #1565c0; margin-bottom: 4px;">
+        <span style="font-size: 12px; color: #666; font-weight: normal;">[${timestamp}]</span> 
+        AI Interviewer
+      </div>
+      <div style="color: #0d47a1;">${questionText}</div>
+    `;
+
+    transcriptionArea.appendChild(entry);
+    transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
+    
+    // Also update PIP
+    this.updatePipTranscription(`[AI Interviewer]: ${questionText}`);
   }
 
   handleQuestionGenerated(data) {
@@ -2733,7 +3319,11 @@ class WeebAssistantUI {
   showLoading(message = 'Loading...') {
     console.log('Showing loading overlay:', message);
     if (this.elements.loadingOverlay) {
-      this.elements.loadingOverlay.querySelector('.loading-text').textContent = message;
+      const loader = this.elements.loadingOverlay.querySelector('.loader') || 
+                    this.elements.loadingOverlay.querySelector('.loading-text');
+      if (loader) {
+        loader.textContent = message;
+      }
       this.elements.loadingOverlay.classList.remove('hidden');
       this.elements.loadingOverlay.setAttribute('aria-hidden', 'false');
     }

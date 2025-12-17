@@ -21,136 +21,135 @@
                 live: (options = {}) => {
                     console.log('Creating live transcription connection (fallback)');
                     
-                    // Create WebSocket connection to Deepgram
+                    const liveTranscription = {
+                        _websocket: null,
+                        _isConnected: false,
+                        _pendingMessages: [],
+                        _handlers: {},
+                        
+                        on: (event, callback) => {
+                            console.log(`Fallback: Registering event handler for ${event}`);
+                            if (!liveTranscription._handlers[event]) {
+                                liveTranscription._handlers[event] = [];
+                            }
+                            liveTranscription._handlers[event].push(callback);
+                        },
+                        
+                        send: (audioData) => {
+                            if (liveTranscription._isConnected && liveTranscription._websocket && liveTranscription._websocket.readyState === WebSocket.OPEN) {
+                                liveTranscription._websocket.send(audioData);
+                            } else {
+                                liveTranscription._pendingMessages.push(audioData);
+                            }
+                        },
+                        
+                        finish: () => {
+                            if (liveTranscription._websocket) {
+                                liveTranscription._websocket.close();
+                                liveTranscription._websocket = null;
+                                liveTranscription._isConnected = false;
+                            }
+                        },
+                        
+                        close: () => {
+                            liveTranscription.finish();
+                        },
+                        
+                        removeAllListeners: () => {
+                            liveTranscription._handlers = {};
+                        }
+                    };
+
                     const deepgramUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&diarize=true&punctuate=true&utterances=true&encoding=linear16&sample_rate=16000&channels=1`;
                     
-                    try {
-                        console.log('Creating WebSocket connection to Deepgram...');
-                        let ws;
+                    // Proxy URL logic
+                    const protocol = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+                    const host = (typeof window !== 'undefined') ? window.location.host : 'localhost:3000';
+                    const proxyUrl = `${protocol}//${host}/api/deepgram-proxy?model=nova-2&language=en-US&smart_format=true&diarize=true&punctuate=true&utterances=true&encoding=linear16&sample_rate=16000&channels=1`;
+
+                    const connect = (url, isProxy) => {
+                        console.log(`Attempting connection to ${isProxy ? 'proxy' : 'Deepgram direct'}...`);
+                        
                         try {
-                            console.log('Creating WebSocket with URL:', deepgramUrl);
-                            console.log('Using API key:', self.apiKey ? self.apiKey.substring(0, 8) + '...' : 'NO API KEY');
-                            ws = new WebSocket(deepgramUrl, ['token', self.apiKey]);
-                            console.log('WebSocket created, readyState:', ws.readyState, 'CONNECTING=0, OPEN=1, CLOSING=2, CLOSED=3');
+                            const protocols = isProxy ? [] : ['token', self.apiKey];
+                            const ws = new WebSocket(url, protocols);
+                            liveTranscription._websocket = ws;
                             
-                            // Add immediate event listeners to track connection
-                            ws.onopen = () => console.log('WebSocket opened immediately');
-                            ws.onerror = (error) => console.log('WebSocket error immediately:', error);
-                            ws.onclose = (event) => console.log('WebSocket closed immediately:', event.code, event.reason);
-                            
-                        } catch (wsError) {
-                            console.error('Failed to create WebSocket:', wsError);
-                            throw new Error('WebSocket creation failed: ' + wsError.message);
-                        }
-                        
-                        const liveTranscription = {
-                            _websocket: ws,
-                            _isConnected: false,
-                            _pendingMessages: [],
-                            
-                            on: (event, callback) => {
-                                console.log(`Fallback: Registering event handler for ${event}`);
-                                console.log(`Current WebSocket state:`, liveTranscription._websocket?.readyState);
+                            ws.onopen = () => {
+                                console.log(`WebSocket connected (${isProxy ? 'proxy' : 'direct'})`);
+                                liveTranscription._isConnected = true;
                                 
-                                if (event === 'open') {
-                                    // WebSocket connection is already created, just set up the onopen handler
-                                    liveTranscription._websocket.onopen = () => {
-                                        console.log('Fallback WebSocket connected successfully');
-                                        console.log('WebSocket readyState:', liveTranscription._websocket.readyState);
-                                        liveTranscription._isConnected = true;
-                                        console.log('Processing', liveTranscription._pendingMessages.length, 'queued messages');
-                                        // Send any pending messages
-                                        while (liveTranscription._pendingMessages.length > 0) {
-                                            const message = liveTranscription._pendingMessages.shift();
-                                            console.log('Sending queued audio data, size:', message.byteLength || message.length);
-                                            liveTranscription._websocket.send(message);
-                                        }
-                                        callback();
-                                    };
-                                    
-                                    liveTranscription._websocket.onmessage = (event) => {
-                                        try {
-                                            const data = JSON.parse(event.data);
-                                            console.log('Fallback: Received WebSocket message, type:', data.type);
-                                            if (data.type === 'Results' && data.channel && self.eventHandlers.transcript) {
-                                                console.log('Fallback: Processing transcript data, handlers:', self.eventHandlers.transcript?.length || 0);
-                                                self.eventHandlers.transcript.forEach(handler => handler(data));
-                                            }
-                                        } catch (error) {
-                                            console.error('Fallback: Error parsing WebSocket message', error);
-                                        }
-                                    };
-                                    
-                                    liveTranscription._websocket.onerror = (error) => {
-                                        console.error('Fallback WebSocket error', error);
-                                        if (self.eventHandlers.error) {
-                                            self.eventHandlers.error.forEach(handler => handler(error));
-                                        }
-                                    };
-                                    
-                                    liveTranscription._websocket.onclose = (event) => {
-                                        console.log('Fallback WebSocket closed', event);
-                                        liveTranscription._isConnected = false;
-                                        if (self.eventHandlers.close) {
-                                            self.eventHandlers.close.forEach(handler => handler(event));
-                                        }
-                                    };
-                                } else if (event === 'transcript' || event === 'transcriptReceived') {
-                                    if (!self.eventHandlers.transcript) {
-                                        self.eventHandlers.transcript = [];
-                                    }
-                                    self.eventHandlers.transcript.push(callback);
-                                } else if (event === 'error') {
-                                    if (!self.eventHandlers.error) {
-                                        self.eventHandlers.error = [];
-                                    }
-                                    self.eventHandlers.error.push(callback);
-                                } else if (event === 'close') {
-                                    if (!self.eventHandlers.close) {
-                                        self.eventHandlers.close = [];
-                                    }
-                                    self.eventHandlers.close.push(callback);
+                                // Send pending messages
+                                while (liveTranscription._pendingMessages.length > 0) {
+                                    ws.send(liveTranscription._pendingMessages.shift());
                                 }
-                            },
+                                
+                                // Trigger open handlers
+                                if (liveTranscription._handlers.open) {
+                                    liveTranscription._handlers.open.forEach(cb => cb());
+                                }
+                            };
                             
-                            send: (audioData) => {
-                                console.log('Fallback: send() called, connection state:', liveTranscription._isConnected, 'readyState:', liveTranscription._websocket?.readyState);
-                                if (liveTranscription._isConnected && liveTranscription._websocket && liveTranscription._websocket.readyState === WebSocket.OPEN) {
-                                    console.log('Fallback: Sending audio data, size:', audioData.byteLength || audioData.length);
-                                    liveTranscription._websocket.send(audioData);
-                                    console.log('Fallback: Audio data sent via WebSocket');
+                            ws.onmessage = (event) => {
+                                try {
+                                    const data = JSON.parse(event.data);
+                                    if (data.type === 'Results' && data.channel) {
+                                        // Trigger transcript handlers
+                                        if (liveTranscription._handlers.transcript) {
+                                            liveTranscription._handlers.transcript.forEach(cb => cb(data));
+                                        }
+                                        if (liveTranscription._handlers.transcriptReceived) {
+                                            liveTranscription._handlers.transcriptReceived.forEach(cb => cb(data));
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.error('Error parsing message:', error);
+                                }
+                            };
+                            
+                            ws.onerror = (error) => {
+                                console.error(`WebSocket error (${isProxy ? 'proxy' : 'direct'}):`, error);
+                                
+                                if (!isProxy && !liveTranscription._isConnected) {
+                                    console.log('Direct connection failed, attempting fallback to proxy...');
+                                    connect(proxyUrl, true);
                                 } else {
-                                    console.warn('Fallback: WebSocket not ready, queuing audio data. Queue size:', liveTranscription._pendingMessages.length + 1);
-                                    liveTranscription._pendingMessages.push(audioData);
+                                    // Trigger error handlers
+                                    if (liveTranscription._handlers.error) {
+                                        liveTranscription._handlers.error.forEach(cb => cb(error));
+                                    }
                                 }
-                            },
+                            };
                             
-                            finish: () => {
-                                console.log('Fallback: Finishing transcription');
-                                if (liveTranscription._websocket) {
-                                    liveTranscription._websocket.close();
-                                    liveTranscription._websocket = null;
-                                    liveTranscription._isConnected = false;
+                            ws.onclose = (event) => {
+                                console.log(`WebSocket closed (${isProxy ? 'proxy' : 'direct'})`);
+                                liveTranscription._isConnected = false;
+                                
+                                // Only trigger close if we're not retrying
+                                if (isProxy || liveTranscription._isConnected) {
+                                    if (liveTranscription._handlers.close) {
+                                        liveTranscription._handlers.close.forEach(cb => cb(event));
+                                    }
                                 }
-                            },
+                            };
                             
-                            close: () => {
-                                console.log('Fallback: Closing transcription connection');
-                                liveTranscription.finish();
-                            },
-                            
-                            removeAllListeners: () => {
-                                console.log('Fallback: Removing all event listeners');
-                                self.eventHandlers = {};
+                        } catch (error) {
+                            console.error('Connection setup failed:', error);
+                            if (!isProxy) {
+                                console.log('Direct connection setup failed, attempting fallback to proxy...');
+                                connect(proxyUrl, true);
+                            } else {
+                                if (liveTranscription._handlers.error) {
+                                    liveTranscription._handlers.error.forEach(cb => cb(error));
+                                }
                             }
-                        };
-                        
-                        return liveTranscription;
-                        
-                    } catch (error) {
-                        console.error('Fallback: Failed to create WebSocket connection', error);
-                        throw error;
-                    }
+                        }
+                    };
+                    
+                    // Start initial connection
+                    connect(deepgramUrl, false);
+                    
+                    return liveTranscription;
                 }
             };
         }
