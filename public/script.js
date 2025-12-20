@@ -14,6 +14,7 @@ class WeebAssistantUI {
       deepseekBaseUrl: 'https://api.deepseek.com/v1',
       geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
     };
+    
     this.state = {
       isRecording: false,
       isTranscribing: false,
@@ -98,6 +99,10 @@ class WeebAssistantUI {
     this.setupAccessibility();
     this.setupResponsive();
     this.loadTheme();
+    
+    // Initialize Knowledge Base with saved template
+    this.updateKnowledgeBaseUI();
+    
     this.hideLoading(); // Hide loading overlay after initialization
     
     // Delay WebSocket connection to ensure page is fully loaded
@@ -226,8 +231,10 @@ class WeebAssistantUI {
       templateNameInput: document.getElementById('template-name'),
       templateSelector: document.getElementById('template-selector'),
       deleteTemplateBtn: document.getElementById('delete-template-btn'),
+      saveBuiltinTemplateBtn: document.getElementById('save-builtin-template-btn'),
       autoGenerateTemplateBtn: document.getElementById('auto-generate-template-btn'),
       // Portfolio Information
+      portfolioNicheSelect: document.getElementById('portfolio-niche'),
       portfolioNameInput: document.getElementById('portfolio-name'),
       portfolioTitleInput: document.getElementById('portfolio-title'),
       portfolioExperienceInput: document.getElementById('portfolio-experience'),
@@ -345,6 +352,7 @@ class WeebAssistantUI {
     this.elements.resetTemplateBtn?.addEventListener('click', () => this.resetTemplate());
     this.elements.previewTemplateBtn?.addEventListener('click', () => this.previewTemplate());
     this.elements.deleteTemplateBtn?.addEventListener('click', () => this.deleteTemplate());
+    this.elements.saveBuiltinTemplateBtn?.addEventListener('click', () => this.saveBuiltinTemplate());
     this.elements.autoGenerateTemplateBtn?.addEventListener('click', () => this.autoGenerateTemplate());
     this.elements.templateSelector?.addEventListener('change', () => this.loadSelectedTemplate());
     
@@ -1136,6 +1144,7 @@ class WeebAssistantUI {
       
       // Collect portfolio information
       const portfolio = {
+        niche: this.elements.portfolioNicheSelect?.value || 'digital-marketing',
         name: this.elements.portfolioNameInput?.value?.trim() || '',
         title: this.elements.portfolioTitleInput?.value?.trim() || '',
         experience: this.elements.portfolioExperienceInput?.value?.trim() || '',
@@ -1145,6 +1154,9 @@ class WeebAssistantUI {
         achievements: this.elements.portfolioAchievementsInput?.value?.trim() || '',
         skills: this.elements.portfolioSkillsInput?.value?.trim() || ''
       };
+      
+      // Update global knowledge base for real-time assistance
+      this.updateGlobalKnowledgeBase(portfolio);
       
       // Save template configuration with portfolio
       const templateConfig = {
@@ -1345,19 +1357,23 @@ INSTRUCTIONS:
 Return a numbered list with each question followed by a compelling sample answer.`,
         defaultTopic: 'Google Ads Portfolio Interview',
         numQuestions: 5,
-        lastModified: new Date().toISOString()
+        lastModified: new Date().toISOString(),
+        portfolio: {
+          niche: 'digital-marketing',
+          name: 'Marlon Palomares',
+          title: 'Google Ads Specialist',
+          experience: '2+',
+          budget: '$10,000/month',
+          specialization: 'Local lead generation',
+          certifications: 'Google Search, Display, Video Ads Certified',
+          achievements: 'Managed substantial budgets with consistent lead generation',
+          skills: 'Google Ads, Campaign Optimization, Performance Analysis'
+        }
       };
     }
     
-    if (this.elements.templateContentInput) {
-      this.elements.templateContentInput.value = templateConfig.content;
-    }
-    if (this.elements.defaultTopicInput) {
-      this.elements.defaultTopicInput.value = templateConfig.defaultTopic;
-    }
-    if (this.elements.numQuestionsInput) {
-      this.elements.numQuestionsInput.value = templateConfig.numQuestions;
-    }
+    // Use the shared loader to populate UI and update global knowledge base
+    this.loadTemplateToUI(templateConfig);
     
     // Hide preview initially
     if (this.elements.templatePreview) {
@@ -1369,6 +1385,216 @@ Return a numbered list with each question followed by a compelling sample answer
   }
 
   // Template Management Functions
+  getBuiltInTemplates() {
+    return {
+      'Google Ads Expert': {
+        content: `You are an expert Google Ads Interview Coach.
+You help candidates land high-paying roles by preparing them with advanced strategies and "100 Common Google Ads Questions".
+
+HOW TO ANSWER (STAR METHOD):
+✅ Situation: Describe the campaign, budget, or client goal
+✅ Assessment/Action: Explain the strategy, keywords, or optimization you implemented
+✅ Result: Share the ROAS, CTR, conversion rate improvement, or lead quality
+😊 Tone: Confident, data-driven, and expert
+🚫 Avoid vague answers; always include metrics
+
+CANDIDATE PORTFOLIO - {name}:
+- {title} with {experience} years experience
+- Specializes in: {specialization}
+- Key skills: {skills}
+- Achievements: {achievements}
+- Certifications: {certifications}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+REFERENCE - GOOGLE ADS CONCEPTS:
+1. Basics: CPC, CTR, Quality Score, Ad Rank, Match Types (Broad, Phrase, Exact).
+2. Setup: Campaign goals, Audience targeting, Ad Extensions (Sitelinks, Callouts).
+3. Optimization: Negative keywords, A/B Testing, Bid Strategies (Target CPA, ROAS).
+4. Advanced: Remarketing, GTM conversion tracking, Attribution models.
+5. Troubleshooting: Disapproved ads, Low Quality Score, scaling budgets.
+
+INSTRUCTIONS:
+1. Identify if the interviewer is asking a technical, strategic, or behavioral question.
+2. Generate a response using the STAR method based on {name}'s portfolio.
+3. If generating practice questions, pick from the "100 Common Google Ads Questions" logic.
+4. Provide a sample answer for each that highlights {name}'s ability to generate leads and ROI.
+5. Keep answers concise and spoken-style.`,
+        defaultTopic: 'Google Ads Technical Interview',
+        numQuestions: 5,
+        portfolio: {
+          niche: 'digital-marketing',
+          name: 'Marlon Palomares',
+          title: 'Google Ads Specialist',
+          experience: '2+',
+          budget: '$10,000/month',
+          specialization: 'Local Lead Generation (Service-Based)',
+          skills: 'Google Ads, Keyword Research, Campaign Optimization, GTM, GoHighLevel, Analytics',
+          certifications: 'Google Search, Display, Video, Shopping, Analytics, SEMrush',
+          achievements: 'Managed $10k/mo budget, consistently generated high-value leads'
+        }
+      },
+      'Call Center / Customer Service': {
+        content: `You are an expert Customer Service Interview Coach specializing in billing issues and customer verification.
+You help candidates demonstrate their expertise in resolving billing disputes and handling secure customer verification processes.
+
+HOW TO ANSWER (STAR METHOD):
+✅ Situation: Describe the billing issue or verification challenge you faced
+✅ Assessment/Action: Explain how you verified identity and analyzed the billing problem
+✅ Result: Share the resolution and customer satisfaction outcome
+😊 Tone: Professional, trustworthy, and empathetic with frustrated customers
+🚫 Never share sensitive customer information or verification details
+
+CANDIDATE PORTFOLIO - {name}:
+- {title} with {experience} years experience in billing and verification
+- Specializes in: {specialization}
+- Key skills: {skills}
+- Achievements: {achievements}
+- Certifications: {certifications}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+REFERENCE - BILLING & VERIFICATION EXPERTISE:
+1. Billing Issues: Incorrect charges, Refund requests, Payment disputes, Service credits, Prorated billing
+2. Customer Verification: Identity confirmation, Account security, Authentication protocols, PCI compliance
+3. Dispute Resolution: Investigating charges, Explaining billing cycles, Processing adjustments, Payment plans
+4. Communication Skills: De-escalation techniques, Clear explanations, Documentation requirements, Follow-up procedures
+5. Security Protocols: Data protection, Privacy regulations, Secure payment processing, Fraud prevention
+6. System Knowledge: Billing software, CRM systems, Payment gateways, Account management tools
+
+REFERENCE - 100 CALL CENTER QUESTIONS DATABASE:
+For complex technical and customer service questions, refer to the comprehensive question bank covering:
+- Technical troubleshooting (Questions 81-90): System crashes, unknown answers, complex issues
+- Difficult situations (Questions 61-80): Angry customers, stress management, language barriers
+- Problem-solving scenarios (Questions 81-90): Quick thinking, gathering information, managing multiple inquiries
+- Performance questions (Questions 91-100): Upselling, time management, mistake handling
+
+SAMPLE COMPLEX SCENARIOS WITH SHORT, DIRECT ANSWERS:
+
+**Scenario 1 - System Crash During Call:**
+Q: "What if you're helping a customer with a billing dispute and the system crashes?"
+A: "First, I'd reassure the customer: 'I apologize, we're experiencing a technical issue. Let me document your concern and call you back within 30 minutes with a resolution.' I'd take their callback number, create a ticket with details, and follow up as promised."
+
+**Scenario 2 - Angry Customer with Billing Error:**
+Q: "A customer is yelling about a $500 incorrect charge. How do you handle this?"
+A: "I stay calm and say: 'I understand your frustration. Let me verify your account and investigate this charge immediately.' I confirm identity, review the bill, and if it's our error, I process the credit while explaining: 'You're absolutely right. I'm processing a $500 credit that will appear in 3-5 business days.'"
+
+**Scenario 3 - Complex Technical Issue:**
+Q: "Customer says their internet is down but you've never heard of this error code."
+A: "I acknowledge: 'That's an unusual error. Let me research this with our technical team while keeping you on the line.' I use our knowledge base, consult colleagues, and provide: 'This error indicates a router firmware issue. I'll guide you through a 2-minute reset process.'"
+
+**Scenario 4 - Language Barrier:**
+Q: "Customer barely speaks English and needs help with their bill."
+A: "I speak slowly: 'I understand billing is confusing. Let me help.' I use simple words, confirm understanding with yes/no questions, and offer: 'Would you prefer a translator? I can connect you to our Spanish line immediately.'"
+
+INSTRUCTIONS:
+1. Generate {num_questions} billing and verification interview questions
+2. For complex questions, reference the 100-callcenter-questions.md database (Questions 61-100)
+3. Provide SHORT, DIRECT answers (2-3 sentences max) for complex scenarios
+4. Focus on immediate solutions and clear next steps
+5. Show how {name} handles technical issues, angry customers, and system problems
+6. Include specific timeframes and follow-up commitments
+7. Demonstrate calm, professional responses under pressure`,
+        defaultTopic: 'Billing Issues & Customer Verification',
+        numQuestions: 5,
+        portfolio: {
+          niche: 'customer-service',
+          name: '',
+          title: 'Customer Service Representative',
+          experience: '2+',
+          specialization: 'Billing & Customer Verification',
+          skills: 'Billing Dispute Resolution, Customer Verification, Payment Processing, CRM Systems, De-escalation, PCI Compliance',
+          certifications: 'PCI DSS Compliance, Customer Service Excellence, Billing Systems Certified',
+          achievements: 'Resolved 98% of billing disputes successfully, Maintained 99.5% accuracy in customer verification'
+        }
+      },
+      'Technical Support': {
+        content: `You are an expert Technical Support Interview Coach specializing in smartphone and connectivity troubleshooting.
+You help candidates demonstrate their expertise in resolving iPhone, Android, and cable/internet issues.
+
+HOW TO ANSWER:
+✅ Explain technical concepts simply (EL15 - Explain Like I'm 5)
+🧠 Show your troubleshooting process/logic clearly - "What would you check first?"
+🔧 Highlight specific mobile device and connectivity troubleshooting skills
+📱 Focus on iPhone/iOS and Android device issues
+🌐 Emphasize cable, internet, and WiFi connectivity problems
+😊 Tone: Helpful, knowledgeable, and patient with frustrated customers
+
+CANDIDATE PORTFOLIO - {name}:
+- {title} with {experience} years technical experience
+- Specializes in: {specialization}
+- Certifications: {certifications}
+- Technical Skills: {skills}
+- Key Achievements: {achievements}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+REFERENCE - SMARTPHONE & CONNECTIVITY ISSUES:
+1. iPhone Issues: Frozen screen, Battery drain, App crashes, iCloud sync, Face ID problems
+2. Android Issues: Slow performance, Storage full, Google Play errors, Screen freezing
+3. Connectivity Problems: WiFi not connecting, Slow internet, Cable box issues, Router resets
+4. Basic Troubleshooting: Restart device, Check settings, Update software, Reset network
+5. Customer Service: Explain simply, Be patient, Follow up, Document the issue
+
+INSTRUCTIONS:
+1. Generate {num_questions} smartphone and connectivity troubleshooting questions
+2. Focus on common iPhone/Android issues and cable/internet problems
+3. Provide step-by-step troubleshooting answers that {name} would give
+4. Show how {name} explains technical issues in simple terms
+5. Demonstrate customer service skills when dealing with frustrated users
+6. Include specific examples of devices, error messages, and solutions`,
+        defaultTopic: 'Smartphone & Connectivity Troubleshooting',
+        numQuestions: 5,
+        portfolio: {
+          niche: 'technical-support',
+          name: '',
+          title: 'Technical Support Specialist',
+          experience: '3+',
+          specialization: 'Smartphone & Connectivity Support',
+          skills: 'iPhone Troubleshooting, Android Support, WiFi Issues, Cable/Internet Problems, Device Setup, App Installation',
+          certifications: 'Apple Certified iOS Technician, CompTIA A+, Network+',
+          achievements: 'Resolved 95% of smartphone issues on first call, Maintained 4.8/5 customer satisfaction rating'
+        }
+      },
+      'Virtual Assistant': {
+        content: `You are an expert Virtual Assistant Interview Coach.
+You help VAs demonstrate their organization, reliability, and tool proficiency.
+
+HOW TO ANSWER:
+✅ Highlight reliability, autonomy, and quick learning
+🧠 Mention specific tools (GHL, Zapier, Google Workspace, etc.)
+😊 Tone: Proactive, organized, and eager to help
+
+CANDIDATE PORTFOLIO - {name}:
+- {title} with {experience} years experience
+- Specializes in: {specialization}
+- Tools/Skills: {skills}
+- Achievements: {achievements}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+INSTRUCTIONS:
+1. Generate {num_questions} VA interview questions (e.g., managing multiple clients, tools proficiency).
+2. Provide a sample answer for each that highlights {name}'s organization and tool mastery.`,
+        defaultTopic: 'VA Task Management',
+        numQuestions: 5,
+        portfolio: {
+          niche: 'virtual-assistant',
+          name: '',
+          title: 'Virtual Assistant',
+          experience: '2+',
+          specialization: 'Administrative Support',
+          skills: 'Google Workspace, Zapier, Asana, Email Management',
+          achievements: 'Managed 3 clients simultaneously'
+        }
+      }
+    };
+  }
+
   updateTemplateSelector() {
     const selector = this.elements.templateSelector;
     if (!selector) return;
@@ -1378,14 +1604,35 @@ Return a numbered list with each question followed by a compelling sample answer
       selector.remove(1);
     }
     
-    // Load all saved templates
-    const templates = this.getAllTemplates();
-    Object.keys(templates).forEach(templateName => {
+    // Add Built-in Templates
+    const builtIn = this.getBuiltInTemplates();
+    const builtInGroup = document.createElement('optgroup');
+    builtInGroup.label = 'Built-in Templates';
+    
+    Object.keys(builtIn).forEach(templateName => {
       const option = document.createElement('option');
-      option.value = templateName;
+      option.value = `builtin:${templateName}`; // Use prefix to distinguish
       option.textContent = templateName;
-      selector.appendChild(option);
+      builtInGroup.appendChild(option);
     });
+    selector.appendChild(builtInGroup);
+    
+    // Add Saved Templates
+    const savedTemplates = this.getAllTemplates();
+    const savedKeys = Object.keys(savedTemplates);
+    
+    if (savedKeys.length > 0) {
+      const savedGroup = document.createElement('optgroup');
+      savedGroup.label = 'Saved Templates';
+      
+      savedKeys.forEach(templateName => {
+        const option = document.createElement('option');
+        option.value = templateName;
+        option.textContent = templateName;
+        savedGroup.appendChild(option);
+      });
+      selector.appendChild(savedGroup);
+    }
   }
 
   getAllTemplates() {
@@ -1410,6 +1657,29 @@ Return a numbered list with each question followed by a compelling sample answer
     
     if (!templateName) return;
     
+    // Show/hide save built-in template button
+    if (this.elements.saveBuiltinTemplateBtn) {
+      if (templateName.startsWith('builtin:')) {
+        this.elements.saveBuiltinTemplateBtn.style.display = 'block';
+      } else {
+        this.elements.saveBuiltinTemplateBtn.style.display = 'none';
+      }
+    }
+    
+    // Check if it's a built-in template
+    if (templateName.startsWith('builtin:')) {
+      const builtInName = templateName.replace('builtin:', '');
+      const builtInTemplates = this.getBuiltInTemplates();
+      const template = builtInTemplates[builtInName];
+      
+      if (template) {
+        this.loadTemplateToUI(template);
+        this.showNotification(`Loaded built-in template: ${builtInName}`, 'info');
+        return;
+      }
+    }
+    
+    // Otherwise load from local storage
     const templateKey = `weeb-assistant-template-${templateName}`;
     const templateData = localStorage.getItem(templateKey);
     
@@ -1433,6 +1703,12 @@ Return a numbered list with each question followed by a compelling sample answer
       return;
     }
     
+    // Prevent deleting built-in templates
+    if (templateName.startsWith('builtin:')) {
+      this.showNotification('Cannot delete built-in templates', 'warning');
+      return;
+    }
+    
     if (confirm(`Are you sure you want to delete the template "${templateName}"?`)) {
       const templateKey = `weeb-assistant-template-${templateName}`;
       localStorage.removeItem(templateKey);
@@ -1441,21 +1717,235 @@ Return a numbered list with each question followed by a compelling sample answer
     }
   }
 
+  saveBuiltinTemplate() {
+    const selector = this.elements.templateSelector;
+    const templateName = selector?.value;
+    
+    if (!templateName || !templateName.startsWith('builtin:')) {
+      this.showNotification('Please select a built-in template to save', 'error');
+      return;
+    }
+    
+    const builtInName = templateName.replace('builtin:', '');
+    const builtInTemplates = this.getBuiltInTemplates();
+    const template = builtInTemplates[builtInName];
+    
+    if (!template) {
+      this.showNotification('Built-in template not found', 'error');
+      return;
+    }
+    
+    // Generate a new name for the saved template
+    const newTemplateName = prompt(`Enter a name for the saved template (original: ${builtInName}):`, builtInName);
+    
+    if (!newTemplateName || !newTemplateName.trim()) {
+      this.showNotification('Template name is required', 'error');
+      return;
+    }
+    
+    const trimmedName = newTemplateName.trim();
+    
+    // Check if template name already exists
+    const templateKey = `weeb-assistant-template-${trimmedName}`;
+    if (localStorage.getItem(templateKey)) {
+      if (!confirm(`A template named "${trimmedName}" already exists. Do you want to overwrite it?`)) {
+        return;
+      }
+    }
+    
+    // Save the template
+    const templateToSave = {
+      ...template,
+      name: trimmedName,
+      originalBuiltIn: builtInName // Keep track of which built-in this came from
+    };
+    
+    localStorage.setItem(templateKey, JSON.stringify(templateToSave));
+    
+    // Update the template selector
+    this.updateTemplateSelector();
+    
+    // Select the newly saved template
+    if (this.elements.templateSelector) {
+      this.elements.templateSelector.value = trimmedName;
+      this.loadSelectedTemplate(); // This will hide the save button
+    }
+    
+    this.showNotification(`Built-in template "${builtInName}" saved as "${trimmedName}"`, 'success');
+    
+    // Redirect to main UI interface
+    this.toggleKnowledgeBase(false);
+    this.showNotification('Template saved! Redirected to main interface.', 'info');
+  }
+
+  updateGlobalKnowledgeBase(portfolio) {
+    if (!portfolio) return;
+    
+    const kbContent = `
+Core Competencies:
+${portfolio.skills || ''}
+
+Key Achievements:
+${portfolio.achievements || ''}
+
+Current Role/Title: ${portfolio.title || ''}
+Experience: ${portfolio.experience || ''} years
+Specialization: ${portfolio.specialization || ''}
+Certifications: ${portfolio.certifications || ''}
+
+Professional Profile:
+I am a ${portfolio.title} specializing in ${portfolio.specialization}. 
+With ${portfolio.experience} years of experience, I have developed strong skills in ${portfolio.skills ? portfolio.skills.split(',')[0] : 'my field'}.
+    `.trim();
+    
+    window.KNOWLEDGE_BASE = kbContent;
+    console.log('Global Knowledge Base updated:', window.KNOWLEDGE_BASE);
+  }
+
+  updateAIBaseForTemplate(template) {
+    if (!template) return;
+    
+    // Create template-specific AI base that includes both portfolio and template content
+    let templateSpecificBase = '';
+    
+    // Include the full template content for context
+    if (template.content) {
+      templateSpecificBase += `TEMPLATE CONTEXT:\n${template.content}\n\n`;
+    }
+    
+    // Include portfolio information if available
+    if (template.portfolio) {
+      templateSpecificBase += `PORTFOLIO INFORMATION:\n`;
+      templateSpecificBase += `Name: ${template.portfolio.name || 'Candidate'}\n`;
+      templateSpecificBase += `Title: ${template.portfolio.title || ''}\n`;
+      templateSpecificBase += `Experience: ${template.portfolio.experience || ''} years\n`;
+      templateSpecificBase += `Specialization: ${template.portfolio.specialization || ''}\n`;
+      templateSpecificBase += `Skills: ${template.portfolio.skills || ''}\n`;
+      templateSpecificBase += `Certifications: ${template.portfolio.certifications || ''}\n`;
+      templateSpecificBase += `Achievements: ${template.portfolio.achievements || ''}\n`;
+      templateSpecificBase += `Niche: ${template.portfolio.niche || 'general'}\n\n`;
+    }
+    
+    // Add template-specific instructions
+    templateSpecificBase += `TEMPLATE-SPECIFIC INSTRUCTIONS:\n`;
+    templateSpecificBase += `- Answer questions based on the template context above\n`;
+    templateSpecificBase += `- Use the portfolio information to personalize responses\n`;
+    templateSpecificBase += `- Follow the tone and style specified in the template\n`;
+    templateSpecificBase += `- Reference template-specific knowledge and scenarios\n`;
+    templateSpecificBase += `- Default Topic: ${template.defaultTopic || 'General'}\n`;
+    
+    // Store both the original knowledge base and template-specific base
+    window.TEMPLATE_KNOWLEDGE_BASE = templateSpecificBase.trim();
+    
+    console.log('Template-specific knowledge base updated:', window.TEMPLATE_KNOWLEDGE_BASE);
+  }
+
   autoGenerateTemplate() {
     console.log('Auto-generating template from portfolio');
     
     // Get portfolio information
+    const niche = this.elements.portfolioNicheSelect?.value || 'digital-marketing';
     const name = this.elements.portfolioNameInput?.value?.trim() || 'Candidate';
-    const title = this.elements.portfolioTitleInput?.value?.trim() || 'Digital Marketing Specialist';
+    const title = this.elements.portfolioTitleInput?.value?.trim() || 'Professional';
     const experience = this.elements.portfolioExperienceInput?.value?.trim() || '2+';
-    const budget = this.elements.portfolioBudgetInput?.value?.trim() || 'substantial';
-    const specialization = this.elements.portfolioSpecializationInput?.value?.trim() || 'Google Ads management';
-    const certifications = this.elements.portfolioCertificationsInput?.value?.trim() || 'Google Ads certified';
-    const achievements = this.elements.portfolioAchievementsInput?.value?.trim() || 'Proven track record in campaign optimization';
-    const skills = this.elements.portfolioSkillsInput?.value?.trim() || 'Google Ads, Campaign Optimization, Performance Analysis';
+    const budget = this.elements.portfolioBudgetInput?.value?.trim() || '';
+    const specialization = this.elements.portfolioSpecializationInput?.value?.trim() || '';
+    const certifications = this.elements.portfolioCertificationsInput?.value?.trim() || '';
+    const achievements = this.elements.portfolioAchievementsInput?.value?.trim() || '';
+    const skills = this.elements.portfolioSkillsInput?.value?.trim() || '';
     
-    // Auto-generate template with Google Ads Expert System Prompt
-    const autoGeneratedTemplate = `You are a Google Ads, SEO, Meta Ads (Facebook & Instagram), Google Tag Manager, keyword research, campaign optimization, Google Analytics, and Go High Level expert.
+    let autoGeneratedTemplate = '';
+    let defaultTopic = '';
+    
+    // Niche-specific Prompt Generation
+    if (niche === 'customer-service') {
+      defaultTopic = 'Common Call Center Questions';
+      autoGeneratedTemplate = `You are an expert Customer Service and Call Center Interview Coach.
+You help candidates land jobs by preparing them for the "100 Most Common Call Center Interview Questions".
+
+HOW TO ANSWER (STAR METHOD):
+✅ Situation: Describe the circumstances you faced
+✅ Assessment/Action: Explain what you analyzed and the action you took
+✅ Result: Share the positive outcome of your efforts
+😊 Tone: Empathetic, calm, professional, and solution-oriented
+🚫 Avoid blaming customers or negative language
+
+CANDIDATE PORTFOLIO - ${name.toUpperCase()}:
+- ${title} with ${experience} years experience
+- Specializes in: ${specialization}
+- Key skills: ${skills}
+- Achievements: ${achievements}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+REFERENCE - COMMON CALL CENTER QUESTIONS:
+1. Icebreaker: Tell me about yourself, Why us?, Strengths/Weaknesses.
+2. Experience: Educational background, Call center experience, Challenging roles.
+3. Tech: CRM proficiency, Typing speed, Software familiarity.
+4. Customer Service: Definition of good service, Handling unsatisfied customers.
+5. Difficult Situations: Angry customers, Stress management, Conflict resolution.
+6. Problem Solving: Unknown answers, Complex issues, Upselling.
+
+INSTRUCTIONS:
+1. Identify if the interviewer is asking one of the common call center questions or a variation.
+2. Generate a response using the STAR method based on ${name}'s portfolio.
+3. If generating practice questions, pick from the "100 Common Questions" list relevant to {topic}.
+4. Provide a sample answer for each that highlights ${name}'s empathy and problem-solving skills.
+5. Keep answers concise and spoken-style.`;
+
+    } else if (niche === 'technical-support') {
+      defaultTopic = 'Technical Troubleshooting';
+      autoGeneratedTemplate = `You are an expert Technical Support Interview Coach.
+You help candidates demonstrate their troubleshooting skills and technical knowledge.
+
+HOW TO ANSWER:
+✅ Explain technical concepts simply (EL15 - Explain Like I'm 5)
+🧠 Show your troubleshooting process/logic clearly
+🔧 Highlight specific tools and technologies you know
+😊 Tone: Helpful, knowledgeable, and patient
+
+CANDIDATE PORTFOLIO - ${name.toUpperCase()}:
+- ${title} with ${experience} years technical experience
+- Specializes in: ${specialization}
+- Certifications: ${certifications}
+- Technical Skills: ${skills}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+INSTRUCTIONS:
+1. Generate {num_questions} Technical Support interview questions (e.g., troubleshooting steps, explaining tech to non-tech).
+2. Provide a sample answer for each that demonstrates ${name}'s technical expertise and clear communication.
+3. Focus on the "Steps taken to resolve" aspect.`;
+
+    } else if (niche === 'virtual-assistant') {
+      defaultTopic = 'VA Task Management';
+      autoGeneratedTemplate = `You are an expert Virtual Assistant Interview Coach.
+You help VAs demonstrate their organization, reliability, and tool proficiency.
+
+HOW TO ANSWER:
+✅ Highlight reliability, autonomy, and quick learning
+🧠 Mention specific tools (GHL, Zapier, Google Workspace, etc.)
+😊 Tone: Proactive, organized, and eager to help
+
+CANDIDATE PORTFOLIO - ${name.toUpperCase()}:
+- ${title} with ${experience} years experience
+- Specializes in: ${specialization}
+- Tools/Skills: ${skills}
+- Achievements: ${achievements}
+
+INTERVIEW CONTEXT: "{context}"
+TOPIC FOCUS: {topic}
+
+INSTRUCTIONS:
+1. Generate {num_questions} VA interview questions (e.g., managing multiple clients, tools proficiency).
+2. Provide a sample answer for each that highlights ${name}'s organization and tool mastery.`;
+
+    } else {
+      // Default / Digital Marketing (Existing Logic)
+      defaultTopic = `${specialization || 'Digital Marketing'} Interview`;
+      autoGeneratedTemplate = `You are a Google Ads, SEO, Meta Ads (Facebook & Instagram), Google Tag Manager, keyword research, campaign optimization, Google Analytics, and Go High Level expert.
 
 You help local businesses like junk removal, roofing, car detailing, plumbers, electricians, and ecommerce brands get more leads, more calls, more bookings, and better local visibility using smart ads and search strategies.
 
@@ -1464,10 +1954,6 @@ HOW TO ANSWER EVERY INTERVIEW QUESTION OR TOPIC:
 ✅ Use short, clear answers
 🧠 Explain things in simple words a 5th grader can understand
 🧩 Give real examples for the business type being discussed
-  - Junk removal → phone calls & quote requests
-  - Roofing → inspections & storm leads
-  - Car detailing → booking forms & repeat customers
-  - Ecommerce → sales & cart checkouts
 🚫 Avoid marketing jargon or fancy terms
 💬 Sound casual, friendly, and helpful
 😊 Keep the tone positive and human
@@ -1495,7 +1981,7 @@ INTERVIEW CONTEXT: "{context}"
 TOPIC FOCUS: {topic}
 
 INSTRUCTIONS:
-1. Generate {num_questions} common Google Ads interview questions relevant to {topic}
+1. Generate {num_questions} common interview questions relevant to {topic}
 2. For each question, provide an impressive sample answer that highlights ${name}'s specific experience and achievements
 3. Focus on positioning them as an expert who can deliver results for local businesses
 4. Emphasize their training, certifications, and proven track record with specific business types
@@ -1504,6 +1990,7 @@ INSTRUCTIONS:
 7. Show how their expertise translates to more leads, calls, and bookings
 
 Return a numbered list with each question followed by a compelling sample answer that demonstrates expertise in getting local businesses more customers.`;
+    }
 
     // Fill in the template content
     if (this.elements.templateContentInput) {
@@ -1512,13 +1999,36 @@ Return a numbered list with each question followed by a compelling sample answer
     
     // Set default topic
     if (this.elements.defaultTopicInput) {
-      this.elements.defaultTopicInput.value = `${specialization} Interview`;
+      this.elements.defaultTopicInput.value = defaultTopic;
     }
     
-    this.showNotification('Template auto-generated from portfolio information', 'success');
+    // Create a temporary template object for AI adaptation
+    const tempTemplate = {
+      content: autoGeneratedTemplate,
+      defaultTopic: defaultTopic,
+      portfolio: {
+        niche: niche,
+        name: name,
+        title: title,
+        experience: experience,
+        budget: budget,
+        specialization: specialization,
+        certifications: certifications,
+        achievements: achievements,
+        skills: skills
+      }
+    };
+    
+    // Update AI adaptation with the newly generated template
+    this.updateAIBaseForTemplate(tempTemplate);
+    
+    this.showNotification(`Template auto-generated for ${niche.replace('-', ' ')}`, 'success');
   }
 
   loadTemplateToUI(template) {
+    // Store the complete template data globally for AI adaptation
+    window.CURRENT_TEMPLATE = template;
+    
     if (this.elements.templateContentInput) {
       this.elements.templateContentInput.value = template.content || '';
     }
@@ -1531,6 +2041,7 @@ Return a numbered list with each question followed by a compelling sample answer
     
     // Load portfolio information if available
     if (template.portfolio) {
+      if (this.elements.portfolioNicheSelect) this.elements.portfolioNicheSelect.value = template.portfolio.niche || 'digital-marketing';
       if (this.elements.portfolioNameInput) this.elements.portfolioNameInput.value = template.portfolio.name || '';
       if (this.elements.portfolioTitleInput) this.elements.portfolioTitleInput.value = template.portfolio.title || '';
       if (this.elements.portfolioExperienceInput) this.elements.portfolioExperienceInput.value = template.portfolio.experience || '';
@@ -1539,6 +2050,12 @@ Return a numbered list with each question followed by a compelling sample answer
       if (this.elements.portfolioCertificationsInput) this.elements.portfolioCertificationsInput.value = template.portfolio.certifications || '';
       if (this.elements.portfolioAchievementsInput) this.elements.portfolioAchievementsInput.value = template.portfolio.achievements || '';
       if (this.elements.portfolioSkillsInput) this.elements.portfolioSkillsInput.value = template.portfolio.skills || '';
+      
+      // Update global knowledge base when loading template
+      this.updateGlobalKnowledgeBase(template.portfolio);
+      
+      // Update AI adaptation with template-specific content
+      this.updateAIBaseForTemplate(template);
     }
   }
 
@@ -2727,8 +3244,28 @@ Return a numbered list with each question followed by a compelling sample answer
       
       Keep it conversational and professional. Sound confident but humble.`;
 
-      // Inject Knowledge Base if available
-      if (window.KNOWLEDGE_BASE) {
+      // Use template-specific knowledge base if available
+      if (window.TEMPLATE_KNOWLEDGE_BASE) {
+        prompt = `
+          You are acting as the candidate described in the following template profile. 
+          Use the template context and portfolio information to answer the interviewer's question or statement professionally.
+          
+          ${window.TEMPLATE_KNOWLEDGE_BASE}
+          
+          INTERVIEWER STATEMENT/QUESTION: "${question}"
+          
+          INSTRUCTIONS:
+          - Answer based on the specific template context and instructions provided
+          - Use the portfolio information to personalize responses
+          - Follow the tone and style specified in the template
+          - Reference template-specific knowledge, scenarios, and expertise
+          - Keep answers concise (under 60 words) and natural (spoken English)
+          - If the template includes specific question databases (like 100-callcenter-questions.md), reference relevant scenarios
+          - Focus on the template's default topic and specialization area
+        `;
+      }
+      // Fallback to original knowledge base if template-specific base is not available
+      else if (window.KNOWLEDGE_BASE) {
         prompt = `
           You are acting as the candidate described in the following profile. 
           Use the profile information to answer the interviewer's question or statement confidentially and professionally.
