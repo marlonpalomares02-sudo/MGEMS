@@ -40,6 +40,12 @@ if %errorlevel% equ 0 (
     echo.
     echo Open your browser and go to: http://localhost:3000
     echo.
+    echo NEW FEATURE: Save Built-in Template functionality is now available!
+    echo - Select a built-in template from the dropdown
+    echo - Click the green "Save Built-in Template" button
+    echo - Enter a name and save it as your own template
+    echo - You'll be automatically redirected to the main UI
+    echo.
     echo To stop MGEMS, run: docker-compose down
     echo To view logs, run: docker-compose logs -f
 ) else (

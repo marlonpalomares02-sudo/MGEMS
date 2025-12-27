@@ -158,6 +158,16 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Health check endpoint for Docker
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '1.0.0'
+  });
+});
+
 // AI API proxy to bypass CORS
 app.post('/api/ai-proxy', async (req, res) => {
   try {

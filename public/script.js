@@ -1436,18 +1436,19 @@ INSTRUCTIONS:
         }
       },
       'Call Center / Customer Service': {
-        content: `You are an expert Customer Service Interview Coach specializing in billing issues and customer verification.
-You help candidates demonstrate their expertise in resolving billing disputes and handling secure customer verification processes.
+        content: `You are an expert Call Center Interview Coach specializing in Customer Service and Technical Support roles.
+You help candidates demonstrate their expertise in handling customer interactions, resolving issues, and providing excellent service across various call center environments.
 
 HOW TO ANSWER (STAR METHOD):
-✅ Situation: Describe the billing issue or verification challenge you faced
-✅ Assessment/Action: Explain how you verified identity and analyzed the billing problem
-✅ Result: Share the resolution and customer satisfaction outcome
-😊 Tone: Professional, trustworthy, and empathetic with frustrated customers
-🚫 Never share sensitive customer information or verification details
+✅ Situation: Describe the customer interaction or technical challenge you faced
+✅ Task: Explain your responsibility in resolving the issue
+✅ Action: Detail the steps you took to help the customer
+✅ Result: Share the positive outcome and customer satisfaction
+😊 Tone: Professional, empathetic, patient, and solution-focused
+🚫 Never make promises you can't keep or share confidential information
 
 CANDIDATE PORTFOLIO - {name}:
-- {title} with {experience} years experience in billing and verification
+- {title} with {experience} years experience in call center operations
 - Specializes in: {specialization}
 - Key skills: {skills}
 - Achievements: {achievements}
@@ -1456,29 +1457,32 @@ CANDIDATE PORTFOLIO - {name}:
 INTERVIEW CONTEXT: "{context}"
 TOPIC FOCUS: {topic}
 
-REFERENCE - BILLING & VERIFICATION EXPERTISE:
-1. Billing Issues: Incorrect charges, Refund requests, Payment disputes, Service credits, Prorated billing
-2. Customer Verification: Identity confirmation, Account security, Authentication protocols, PCI compliance
-3. Dispute Resolution: Investigating charges, Explaining billing cycles, Processing adjustments, Payment plans
-4. Communication Skills: De-escalation techniques, Clear explanations, Documentation requirements, Follow-up procedures
-5. Security Protocols: Data protection, Privacy regulations, Secure payment processing, Fraud prevention
-6. System Knowledge: Billing software, CRM systems, Payment gateways, Account management tools
+REFERENCE - CALL CENTER EXCELLENCE:
+1. Customer Service: Active listening, empathy, problem-solving, de-escalation
+2. Technical Support: Troubleshooting, system knowledge, clear explanations
+3. Communication: Professional tone, clear language, confirmation of understanding
+4. Performance: KPI management, quality scores, customer satisfaction
+5. Tools: CRM systems, ticketing, knowledge bases, call recording
 
-REFERENCE - 100 CALL CENTER QUESTIONS DATABASE:
-For complex technical and customer service questions, refer to the comprehensive question bank covering:
-- Technical troubleshooting (Questions 81-90): System crashes, unknown answers, complex issues
-- Difficult situations (Questions 61-80): Angry customers, stress management, language barriers
-- Problem-solving scenarios (Questions 81-90): Quick thinking, gathering information, managing multiple inquiries
-- Performance questions (Questions 91-100): Upselling, time management, mistake handling
-
-SAMPLE COMPLEX SCENARIOS WITH SHORT, DIRECT ANSWERS:
-
-**Scenario 1 - System Crash During Call:**
-Q: "What if you're helping a customer with a billing dispute and the system crashes?"
-A: "First, I'd reassure the customer: 'I apologize, we're experiencing a technical issue. Let me document your concern and call you back within 30 minutes with a resolution.' I'd take their callback number, create a ticket with details, and follow up as promised."
-
-**Scenario 2 - Angry Customer with Billing Error:**
-Q: "A customer is yelling about a $500 incorrect charge. How do you handle this?"
+INSTRUCTIONS:
+1. Identify if the question is behavioral, technical, or situational
+2. Generate responses using the STAR method based on {name}'s portfolio
+3. Reference the comprehensive CSR/TSR Q&A knowledge base for detailed answers
+4. Focus on customer satisfaction, problem resolution, and professional development
+5. Provide specific examples that demonstrate call center excellence`,
+        defaultTopic: 'Call Center Customer Service Interview',
+        numQuestions: 10,
+        portfolio: {
+          niche: 'customer-service',
+          name: 'Marlon Palomares',
+          title: 'Customer Service Representative',
+          experience: '3+',
+          specialization: 'Billing Support and Technical Assistance',
+          skills: 'Customer Service, Technical Support, CRM Systems, Problem Solving, De-escalation',
+          certifications: 'Customer Service Excellence, Technical Support Fundamentals',
+          achievements: 'Consistently exceeded customer satisfaction targets, resolved 95% of issues on first contact'
+        }
+      },
 A: "I stay calm and say: 'I understand your frustration. Let me verify your account and investigate this charge immediately.' I confirm identity, review the bill, and if it's our error, I process the credit while explaining: 'You're absolutely right. I'm processing a $500 credit that will appear in 3-5 business days.'"
 
 **Scenario 3 - Complex Technical Issue:**
@@ -1824,6 +1828,39 @@ With ${portfolio.experience} years of experience, I have developed strong skills
       templateSpecificBase += `Certifications: ${template.portfolio.certifications || ''}\n`;
       templateSpecificBase += `Achievements: ${template.portfolio.achievements || ''}\n`;
       templateSpecificBase += `Niche: ${template.portfolio.niche || 'general'}\n\n`;
+    }
+    
+    // Add template-specific knowledge bases based on template type
+    if (window.CURRENT_TEMPLATE && window.CURRENT_TEMPLATE.name) {
+      const templateName = window.CURRENT_TEMPLATE.name.toLowerCase();
+      
+      if (templateName.includes('google ads') || templateName.includes('digital marketing')) {
+        templateSpecificBase += `GOOGLE ADS KNOWLEDGE BASE:\n`;
+        templateSpecificBase += `Q: What is CPC? A: Cost Per Click - the amount you pay when someone clicks your ad\n`;
+        templateSpecificBase += `Q: What is CTR? A: Click Through Rate - clicks divided by impressions\n`;
+        templateSpecificBase += `Q: What is Quality Score? A: Google's rating of your ad relevance and landing page quality\n`;
+        templateSpecificBase += `Q: What is Ad Rank? A: Your bid × Quality Score determines your ad position\n`;
+        templateSpecificBase += `Q: What are match types? A: Broad, Phrase, Exact - control how closely search queries must match your keywords\n`;
+        templateSpecificBase += `Q: What are negative keywords? A: Keywords you exclude to prevent irrelevant traffic\n`;
+        templateSpecificBase += `Q: What is remarketing? A: Showing ads to people who previously visited your website\n`;
+        templateSpecificBase += `Q: What is GTM? A: Google Tag Manager - tool for managing tracking codes\n`;
+        templateSpecificBase += `Q: What is ROAS? A: Return On Ad Spend - revenue generated per dollar spent\n`;
+        templateSpecificBase += `Q: What is conversion tracking? A: Measuring specific actions users take after clicking your ads\n\n`;
+      }
+      
+      if (templateName.includes('call center') || templateName.includes('customer service')) {
+        templateSpecificBase += `CALL CENTER KNOWLEDGE BASE:\n`;
+        templateSpecificBase += `Q: How do you handle angry customers? A: Stay calm, listen actively, empathize, focus on solutions\n`;
+        templateSpecificBase += `Q: What is first call resolution? A: Solving customer issues completely during the initial contact\n`;
+        templateSpecificBase += `Q: How do you handle system crashes during calls? A: Document issue, get callback number, promise follow-up within 30 minutes\n`;
+        templateSpecificBase += `Q: What is de-escalation? A: Techniques to calm upset customers and resolve conflicts peacefully\n`;
+        templateSpecificBase += `Q: How do you verify customer identity? A: Ask security questions, confirm personal details, follow company protocols\n`;
+        templateSpecificBase += `Q: What is active listening? A: Paying full attention, asking clarifying questions, confirming understanding\n`;
+        templateSpecificBase += `Q: How do you handle billing disputes? A: Investigate charges, explain billing cycles, process adjustments when appropriate\n`;
+        templateSpecificBase += `Q: What is empathy in customer service? A: Understanding and sharing customer feelings, showing genuine care\n`;
+        templateSpecificBase += `Q: How do you manage call metrics? A: Focus on quality, efficiency, customer satisfaction while meeting KPIs\n`;
+        templateSpecificBase += `Q: What is upselling? A: Suggesting additional products/services that benefit the customer\n\n`;
+      }
     }
     
     // Add template-specific instructions
@@ -3246,6 +3283,17 @@ Return a numbered list with each question followed by a compelling sample answer
 
       // Use template-specific knowledge base if available
       if (window.TEMPLATE_KNOWLEDGE_BASE) {
+        // Detect template type for specific instructions
+        let templateType = 'general';
+        if (window.CURRENT_TEMPLATE && window.CURRENT_TEMPLATE.name) {
+          const templateName = window.CURRENT_TEMPLATE.name.toLowerCase();
+          if (templateName.includes('google ads') || templateName.includes('digital marketing')) {
+            templateType = 'google-ads';
+          } else if (templateName.includes('call center') || templateName.includes('customer service')) {
+            templateType = 'call-center';
+          }
+        }
+        
         prompt = `
           You are acting as the candidate described in the following template profile. 
           Use the template context and portfolio information to answer the interviewer's question or statement professionally.
@@ -3254,14 +3302,19 @@ Return a numbered list with each question followed by a compelling sample answer
           
           INTERVIEWER STATEMENT/QUESTION: "${question}"
           
+          TEMPLATE TYPE: ${templateType}
+          
           INSTRUCTIONS:
           - Answer based on the specific template context and instructions provided
           - Use the portfolio information to personalize responses
           - Follow the tone and style specified in the template
           - Reference template-specific knowledge, scenarios, and expertise
           - Keep answers concise (under 60 words) and natural (spoken English)
-          - If the template includes specific question databases (like 100-callcenter-questions.md), reference relevant scenarios
+          - If the template includes specific question databases, reference relevant scenarios
           - Focus on the template's default topic and specialization area
+          - For Google Ads: Include metrics, strategies, and technical details when relevant
+          - For Call Center: Focus on customer service, problem-solving, and communication skills
+          - Always sound confident and professional while being conversational
         `;
       }
       // Fallback to original knowledge base if template-specific base is not available

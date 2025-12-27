@@ -1,11 +1,26 @@
 version: '3.8'
+
 services:
-  app:
-    build: .
+  mgems:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: mgems-app
     ports:
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      - NODE_ENV=production
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./public:/app/public:ro
+      - ./src:/app/src:ro
+      - ./server.js:/app/server.js:ro
+      - ./package.json:/app/package.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

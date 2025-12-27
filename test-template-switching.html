@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Switching Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .template-info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Template Switching Test</h1>
+    
+    <div class="test-section">
+        <h2>Template Detection Test</h2>
+        <div id="template-detection-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Knowledge Base Integration Test</h2>
+        <div id="kb-integration-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Template Switching Simulation</h2>
+        <button onclick="simulateTemplateSwitch('Google Ads Expert')">Test Google Ads Template</button>
+        <button onclick="simulateTemplateSwitch('Call Center / Customer Service')">Test Call Center Template</button>
+        <div id="switching-results"></div>
+    </div>
+
+    <script src="knowledge-base.js"></script>
+    <script>
+        // Mock the template switching functionality
+        window.CURRENT_TEMPLATE = null;
+        window.TEMPLATE_KNOWLEDGE_BASE = '';
+        
+        function detectTemplateType(templateName) {
+            const name = templateName.toLowerCase();
+            if (name.includes('google ads') || name.includes('digital marketing')) {
+                return 'google-ads';
+            } else if (name.includes('call center') || name.includes('customer service')) {
+                return 'call-center';
+            }
+            return 'general';
+        }
+        
+        function updateAIBaseForTemplate(template) {
+            if (!template) return;
+            
+            let templateSpecificBase = '';
+            
+            // Include the full template content for context
+            if (template.content) {
+                templateSpecificBase += `TEMPLATE CONTEXT:\n${template.content}\n\n`;
+            }
+            
+            // Include portfolio information if available
+            if (template.portfolio) {
+                templateSpecificBase += `PORTFOLIO INFORMATION:\n`;
+                templateSpecificBase += `Name: ${template.portfolio.name || 'Candidate'}\n`;
+                templateSpecificBase += `Title: ${template.portfolio.title || ''}\n`;
+                templateSpecificBase += `Experience: ${template.portfolio.experience || ''} years\n`;
+                templateSpecificBase += `Specialization: ${template.portfolio.specialization || ''}\n`;
+                templateSpecificBase += `Skills: ${template.portfolio.skills || ''}\n`;
+                templateSpecificBase += `Certifications: ${template.portfolio.certifications || ''}\n`;
+                templateSpecificBase += `Achievements: ${template.portfolio.achievements || ''}\n`;
+                templateSpecificBase += `Niche: ${template.portfolio.niche || 'general'}\n\n`;
+            }
+            
+            // Add template-specific knowledge bases based on template type
+            const templateType = detectTemplateType(template.name);
+            
+            if (templateType === 'google-ads') {
+                templateSpecificBase += `GOOGLE ADS KNOWLEDGE BASE:\n`;
+                templateSpecificBase += `Q: What is CPC? A: Cost Per Click - the amount you pay when someone clicks your ad\n`;
+                templateSpecificBase += `Q: What is CTR? A: Click Through Rate - clicks divided by impressions\n`;
+                templateSpecificBase += `Q: What is Quality Score? A: Google's rating of your ad relevance and landing page quality\n`;
+                templateSpecificBase += `Q: What is Ad Rank? A: Your bid × Quality Score determines your ad position\n`;
+                templateSpecificBase += `Q: What are match types? A: Broad, Phrase, Exact - control how closely search queries must match your keywords\n`;
+                templateSpecificBase += `Q: What are negative keywords? A: Keywords you exclude to prevent irrelevant traffic\n`;
+                templateSpecificBase += `Q: What is remarketing? A: Showing ads to people who previously visited your website\n`;
+                templateSpecificBase += `Q: What is GTM? A: Google Tag Manager - tool for managing tracking codes\n`;
+                templateSpecificBase += `Q: What is ROAS? A: Return On Ad Spend - revenue generated per dollar spent\n`;
+                templateSpecificBase += `Q: What is conversion tracking? A: Measuring specific actions users take after clicking your ads\n\n`;
+            }
+            
+            if (templateType === 'call-center') {
+                templateSpecificBase += `CALL CENTER KNOWLEDGE BASE:\n`;
+                templateSpecificBase += `Q: How do you handle angry customers? A: Stay calm, listen actively, empathize, focus on solutions\n`;
+                templateSpecificBase += `Q: What is first call resolution? A: Solving customer issues completely during the initial contact\n`;
+                templateSpecificBase += `Q: How do you handle system crashes during calls? A: Document issue, get callback number, promise follow-up within 30 minutes\n`;
+                templateSpecificBase += `Q: What is de-escalation? A: Techniques to calm upset customers and resolve conflicts peacefully\n`;
+                templateSpecificBase += `Q: How do you verify customer identity? A: Ask security questions, confirm personal details, follow company protocols\n`;
+                templateSpecificBase += `Q: What is active listening? A: Paying full attention, asking clarifying questions, confirming understanding\n`;
+                templateSpecificBase += `Q: How do you handle billing disputes? A: Investigate charges, explain billing cycles, process adjustments when appropriate\n`;
+                templateSpecificBase += `Q: What is empathy in customer service? A: Understanding and sharing customer feelings, showing genuine care\n`;
+                templateSpecificBase += `Q: How do you manage call metrics? A: Focus on quality, efficiency, customer satisfaction while meeting KPIs\n`;
+                templateSpecificBase += `Q: What is upselling? A: Suggesting additional products/services that benefit the customer\n\n`;
+            }
+            
+            // Add template-specific instructions
+            templateSpecificBase += `TEMPLATE-SPECIFIC INSTRUCTIONS:\n`;
+            templateSpecificBase += `- Answer questions based on the template context above\n`;
+            templateSpecificBase += `- Use the portfolio information to personalize responses\n`;
+            templateSpecificBase += `- Follow the tone and style specified in the template\n`;
+            templateSpecificBase += `- Reference template-specific knowledge and scenarios\n`;
+            templateSpecificBase += `- Default Topic: ${template.defaultTopic || 'General'}\n`;
+            
+            window.TEMPLATE_KNOWLEDGE_BASE = templateSpecificBase.trim();
+            
+            console.log('Template-specific knowledge base updated for:', template.name || 'Unknown Template');
+            return templateSpecificBase;
+        }
+        
+        function simulateTemplateSwitch(templateName) {
+            const resultsDiv = document.getElementById('switching-results');
+            
+            // Mock template data
+            const mockTemplates = {
+                'Google Ads Expert': {
+                    name: 'Google Ads Expert',
+                    content: 'You are an expert Google Ads Interview Coach...',
+                    portfolio: {
+                        name: 'Marlon Palomares',
+                        title: 'Google Ads Specialist',
+                        experience: '2+',
+                        specialization: 'Local Lead Generation',
+                        skills: 'Google Ads, Keyword Research, Campaign Optimization',
+                        certifications: 'Google Search, Display, Video, Shopping, Analytics',
+                        achievements: 'Managed $10k/mo budget, consistently generated high-value leads',
+                        niche: 'digital-marketing'
+                    },
+                    defaultTopic: 'Google Ads Technical Interview'
+                },
+                'Call Center / Customer Service': {
+                    name: 'Call Center / Customer Service',
+                    content: 'You are an expert Call Center Interview Coach...',
+                    portfolio: {
+                        name: 'Marlon Palomares',
+                        title: 'Customer Service Representative',
+                        experience: '3+',
+                        specialization: 'Billing Support and Technical Assistance',
+                        skills: 'Customer Service, Technical Support, CRM Systems, Problem Solving',
+                        certifications: 'Customer Service Excellence, Technical Support Fundamentals',
+                        achievements: 'Consistently exceeded customer satisfaction targets, resolved 95% of issues on first contact',
+                        niche: 'customer-service'
+                    },
+                    defaultTopic: 'Call Center Customer Service Interview'
+                }
+            };
+            
+            const template = mockTemplates[templateName];
+            if (!template) {
+                resultsDiv.innerHTML = '<div class="error">Template not found</div>';
+                return;
+            }
+            
+            // Simulate template switching
+            window.CURRENT_TEMPLATE = template;
+            const knowledgeBase = updateAIBaseForTemplate(template);
+            
+            resultsDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Template Switching Successful</h3>
+                    <p><strong>Template:</strong> ${templateName}</p>
+                    <p><strong>Type:</strong> ${detectTemplateType(templateName)}</p>
+                    <p><strong>Portfolio:</strong> ${template.portfolio.title}</p>
+                </div>
+                <div class="template-info">
+                    <h4>Generated Knowledge Base:</h4>
+                    <pre>${knowledgeBase.substring(0, 500)}...</pre>
+                </div>
+            `;
+        }
+        
+        // Initial tests
+        document.addEventListener('DOMContentLoaded', function() {
+            // Test template detection
+            const detectionResults = document.getElementById('template-detection-results');
+            const testTemplates = [
+                'Google Ads Expert',
+                'Call Center / Customer Service',
+                'Digital Marketing Specialist',
+                'Customer Service Representative'
+            ];
+            
+            let detectionHtml = '<div class="success"><h3>✅ Template Detection Test</h3>';
+            testTemplates.forEach(template => {
+                const type = detectTemplateType(template);
+                detectionHtml += `<p><strong>${template}:</strong> ${type}</p>`;
+            });
+            detectionHtml += '</div>';
+            detectionResults.innerHTML = detectionHtml;
+            
+            // Test knowledge base integration
+            const kbResults = document.getElementById('kb-integration-results');
+            if (window.KNOWLEDGE_BASE) {
+                kbResults.innerHTML = `
+                    <div class="success">
+                        <h3>✅ Knowledge Base Loaded</h3>
+                        <p>Global knowledge base contains ${window.KNOWLEDGE_BASE.length} characters</p>
+                        <p>Includes Google Ads Q&A and CSR/TSR content</p>
+                    </div>
+                `;
+            } else {
+                kbResults.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Knowledge Base Not Found</h3>
+                        <p>Global knowledge base is not loaded</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
