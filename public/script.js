@@ -16,14 +16,13 @@ class WeebAssistantUI {
     };
     
     this.state = {
-      isRecording: false,
       isTranscribing: false,
       isSharingScreen: false,
       isTranscribingScreen: false,
-      currentMeeting: null,
       pipVisible: false,
       selectedScreen: null,
       questions: [],
+      chatItems: [],
       practiceMode: false,
       darkMode: false,
       screenShareStream: null,
@@ -35,9 +34,8 @@ class WeebAssistantUI {
       deepgramSocket: null,
       audioBufferQueue: null,
       lastAudioSendTime: null,
-      audioWorkletLoaded: false,
+      lastTranscriptAt: 0,
       currentPlatform: null,
-      detectedPlatforms: [],
       platformIntegration: {
         zoom: { detected: false, meetingId: null, meetingTitle: null },
         googleMeet: { detected: false, meetingUrl: null, meetingTitle: null },
@@ -48,12 +46,117 @@ class WeebAssistantUI {
     this.pipState = {
       isDragging: false,
       isResizing: false,
+      isMinimized: false,
+      isMaximized: false,
       dragOffset: { x: 0, y: 0 },
-      resizeStart: { x: 0, y: 0, width: 0, height: 0 }
+      resizeStart: { x: 0, y: 0, width: 0, height: 0 },
+      normalBounds: null
     };
     this.pingInterval = null;
     
     this.init();
+  }
+
+  addChatItem(type, text, source = 'system') {
+    const ttlMs = 120000;
+    const item = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type,
+      text,
+      source,
+      createdAt: Date.now()
+    };
+    this.state.chatItems.push(item);
+    this.renderChatThread();
+    this.renderPipChatThread();
+    if (type === 'interviewer_question' || type === 'ai_answer') {
+      setTimeout(() => {
+        const beforeCount = this.state.chatItems.length;
+        this.state.chatItems = this.state.chatItems.filter(chatItem => chatItem.id !== item.id);
+        if (this.state.chatItems.length !== beforeCount) {
+          this.renderChatThread();
+          this.renderPipChatThread();
+        }
+      }, ttlMs);
+    }
+    return item;
+  }
+
+  addInterviewerChat(text, source = 'ai') {
+    return this.addChatItem('interviewer_question', text, source);
+  }
+
+  addAIChat(text, source = 'ai') {
+    return this.addChatItem('ai_answer', text, source);
+  }
+
+  getChatThread() {
+    return [...this.state.chatItems].sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  renderChatThread() {
+    const container = this.elements.chatThread;
+    if (!container) return;
+    const items = this.getChatThread();
+    if (!items.length) {
+      container.innerHTML = '<div class="chat-placeholder">No chat yet. Interviewer questions and AI answers will appear here.</div>';
+      return;
+    }
+
+    container.innerHTML = items.map(item => {
+      const timeLabel = new Date(item.createdAt).toLocaleTimeString();
+      const roleLabel = item.type === 'interviewer_question'
+        ? 'Interviewer'
+        : item.type === 'ai_answer'
+          ? 'AI Answer'
+          : 'System';
+      const roleClass = item.type === 'interviewer_question'
+        ? 'interviewer'
+        : item.type === 'ai_answer'
+          ? 'ai'
+          : 'system';
+      return `
+        <div class="chat-item ${roleClass}">
+          <div class="chat-meta">${roleLabel} · ${timeLabel}</div>
+          <div class="chat-text">${item.text}</div>
+        </div>
+      `;
+    }).join('');
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  renderPipChatThread() {
+    const container = this.elements.pipChatThread;
+    if (!container) return;
+    const items = this.getChatThread();
+    if (!items.length) {
+      container.innerHTML = '<div class="chat-placeholder">Chat will appear here.</div>';
+      return;
+    }
+
+    const recentItems = items.slice(-6);
+    container.innerHTML = recentItems.map(item => {
+      const timeLabel = new Date(item.createdAt).toLocaleTimeString();
+      const roleLabel = item.type === 'interviewer_question'
+        ? 'Interviewer'
+        : item.type === 'ai_answer'
+          ? 'AI'
+          : 'System';
+      const roleClass = item.type === 'interviewer_question'
+        ? 'interviewer'
+        : item.type === 'ai_answer'
+          ? 'ai'
+          : 'system';
+      return `
+        <div class="chat-item ${roleClass}">
+          <div class="chat-meta">${roleLabel} · ${timeLabel}</div>
+          <div class="chat-text">${item.text}</div>
+        </div>
+      `;
+    }).join('');
+
+    container.scrollTop = container.scrollHeight;
   }
 
   clearPipTranscription() {
@@ -75,17 +178,11 @@ class WeebAssistantUI {
   setupPipAutoCleanup() {
     // Check every minute for content older than 30 minutes
     setInterval(() => {
-      const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
-      
-      // Check transcription
-      const pipText = this.elements.pipOverlay.querySelector('.pip-transcription-text');
-      if (pipText && pipText.dataset.timestamp && parseInt(pipText.dataset.timestamp) < thirtyMinutesAgo) {
-        this.clearPipTranscription();
-      }
+      const twoMinutesAgo = Date.now() - (2 * 60 * 1000);
       
       // Check AI content
       const pipAIContent = this.elements.pipOverlay.querySelector('.pip-ai-content');
-      if (pipAIContent && pipAIContent.dataset.timestamp && parseInt(pipAIContent.dataset.timestamp) < thirtyMinutesAgo) {
+      if (pipAIContent && pipAIContent.dataset.timestamp && parseInt(pipAIContent.dataset.timestamp) < twoMinutesAgo) {
         this.clearPipAI();
       }
     }, 60000); // Check every minute
@@ -102,6 +199,8 @@ class WeebAssistantUI {
     
     // Initialize Knowledge Base with saved template
     this.updateKnowledgeBaseUI();
+    this.renderChatThread();
+    this.renderPipChatThread();
     
     this.hideLoading(); // Hide loading overlay after initialization
     
@@ -249,6 +348,8 @@ class WeebAssistantUI {
       screenThumbnails: document.getElementById('screen-thumbnails'),
       shareScreenBtn: document.getElementById('share-screen-btn'),
       stopShareBtn: document.getElementById('stop-share-btn'),
+      screenShareVideo: document.getElementById('screen-share-video'),
+      screenSharePlaceholder: document.getElementById('screen-share-placeholder'),
       
       // Transcription
       interviewerTranscription: document.getElementById('interviewer-transcription'),
@@ -261,6 +362,7 @@ class WeebAssistantUI {
       questionsArea: document.getElementById('questions-area'),
       questionsList: document.getElementById('questions-list'),
       generateQuestionsBtn: document.getElementById('generate-questions-btn'),
+      chatThread: document.getElementById('chat-thread'),
       
       // Status
       meetingStatus: document.getElementById('meeting-status'),
@@ -270,7 +372,9 @@ class WeebAssistantUI {
       pipContent: document.getElementById('pip-content'),
       pipCloseBtn: document.getElementById('pip-close-btn'),
       pipResizeBtn: document.getElementById('pip-resize-btn'),
+      pipMinimizeBtn: document.getElementById('pip-toggle-btn'),
       pipToggleBtn: document.getElementById('pip-icon-btn'),
+      pipChatThread: document.querySelector('.pip-chat-thread'),
       
       // Notifications
       notificationContainer: document.getElementById('notification-container'),
@@ -376,7 +480,8 @@ class WeebAssistantUI {
     
     // PiP Overlay
     this.elements.pipCloseBtn?.addEventListener('click', () => this.hidePiP());
-    this.elements.pipResizeBtn?.addEventListener('mousedown', (e) => this.startResize(e));
+    this.elements.pipResizeBtn?.addEventListener('click', () => this.togglePipMaximize());
+    this.elements.pipMinimizeBtn?.addEventListener('click', () => this.togglePipMinimize());
     this.elements.pipToggleBtn?.addEventListener('click', () => this.togglePiP());
     
     // Keyboard shortcuts
@@ -421,7 +526,12 @@ class WeebAssistantUI {
   }
 
   startDrag(e) {
-    if (e.target.closest('.pip-close') || e.target.closest('.pip-resize')) return;
+    if (e.target.closest('.pip-controls')) return;
+    if (this.pipState.isMaximized) {
+      this.pipState.isMaximized = false;
+      this.elements.pipOverlay.classList.remove('pip-maximized');
+      this.applyPipBounds(this.pipState.normalBounds || this.getPipBounds());
+    }
     
     this.pipState.isDragging = true;
     const rect = this.elements.pipOverlay.getBoundingClientRect();
@@ -521,6 +631,14 @@ class WeebAssistantUI {
   }
 
   startResize(e, direction = 'se') {
+    if (this.pipState.isMinimized) {
+      this.togglePipMinimize();
+    }
+    if (this.pipState.isMaximized) {
+      this.pipState.isMaximized = false;
+      this.elements.pipOverlay.classList.remove('pip-maximized');
+      this.applyPipBounds(this.pipState.normalBounds || this.getPipBounds());
+    }
     this.pipState.isResizing = true;
     this.pipState.resizeDirection = direction;
     this.pipState.resizeStart = {
@@ -538,6 +656,39 @@ class WeebAssistantUI {
     
     e.preventDefault();
     e.stopPropagation();
+  }
+
+  getPipBounds() {
+    if (!this.elements.pipOverlay) return null;
+    const rect = this.elements.pipOverlay.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      left: rect.left,
+      top: rect.top
+    };
+  }
+
+  applyPipBounds(bounds) {
+    if (!this.elements.pipOverlay || !bounds) return;
+    this.elements.pipOverlay.style.width = `${bounds.width}px`;
+    this.elements.pipOverlay.style.height = `${bounds.height}px`;
+    this.elements.pipOverlay.style.left = `${bounds.left}px`;
+    this.elements.pipOverlay.style.top = `${bounds.top}px`;
+    this.elements.pipOverlay.style.right = 'auto';
+    this.elements.pipOverlay.style.bottom = 'auto';
+  }
+
+  getPipMaxBounds() {
+    const padding = 20;
+    const maxWidth = 650;
+    const maxHeight = 550;
+    const width = Math.min(maxWidth, window.innerWidth - padding * 2);
+    const height = Math.min(maxHeight, window.innerHeight - padding * 2);
+    const rect = this.elements.pipOverlay.getBoundingClientRect();
+    const left = Math.max(padding, Math.min(window.innerWidth - width - padding, rect.left));
+    const top = Math.max(padding, Math.min(window.innerHeight - height - padding, rect.top));
+    return { width, height, left, top };
   }
 
   getResizeCursor(direction) {
@@ -1171,8 +1322,14 @@ class WeebAssistantUI {
       // Save with new naming system
       const templateKey = `weeb-assistant-template-${templateName}`;
       localStorage.setItem(templateKey, JSON.stringify(templateConfig));
+      localStorage.setItem('weeb-assistant-template', JSON.stringify(templateConfig));
+      localStorage.setItem('weeb-assistant-template-active', templateName);
       
       // Update UI
+      this.updateTemplateSelector();
+      if (this.elements.templateSelector) {
+        this.elements.templateSelector.value = templateName;
+      }
       this.toggleKnowledgeBase(false);
       this.showNotification('Template saved successfully', 'success');
       this.announceToScreenReader('Template configuration saved');
@@ -1315,10 +1472,25 @@ Return a numbered list with each question followed by a compelling sample answer
     
     // Load saved template or use default
     const savedTemplate = localStorage.getItem('weeb-assistant-template');
+    const activeTemplateName = localStorage.getItem('weeb-assistant-template-active');
     let templateConfig;
     
     if (savedTemplate) {
       templateConfig = JSON.parse(savedTemplate);
+    } else if (activeTemplateName) {
+      if (activeTemplateName.startsWith('builtin:')) {
+        const builtInName = activeTemplateName.replace('builtin:', '');
+        const builtInTemplates = this.getBuiltInTemplates();
+        templateConfig = builtInTemplates[builtInName];
+        if (templateConfig) {
+          templateConfig = { ...templateConfig, name: builtInName };
+        }
+      } else {
+        const stored = localStorage.getItem(`weeb-assistant-template-${activeTemplateName}`);
+        if (stored) {
+          templateConfig = JSON.parse(stored);
+        }
+      }
     } else {
       // Default template with Marlon's portfolio
       templateConfig = {
@@ -1382,6 +1554,19 @@ Return a numbered list with each question followed by a compelling sample answer
     
     // Update template selector
     this.updateTemplateSelector();
+    if (this.elements.templateSelector && templateConfig) {
+      let selectedValue = '';
+      if (templateConfig.originalBuiltIn) {
+        selectedValue = `builtin:${templateConfig.originalBuiltIn}`;
+      } else if (templateConfig.name) {
+        selectedValue = templateConfig.name;
+      } else if (activeTemplateName) {
+        selectedValue = activeTemplateName;
+      }
+      if (selectedValue) {
+        this.elements.templateSelector.value = selectedValue;
+      }
+    }
   }
 
   // Template Management Functions
@@ -1483,6 +1668,19 @@ INSTRUCTIONS:
           achievements: 'Consistently exceeded customer satisfaction targets, resolved 95% of issues on first contact'
         }
       },
+      'Billing Issues & Customer Verification': {
+        content: `You are an expert Billing & Customer Verification Interview Coach.
+You help candidates de-escalate billing disputes, verify accounts, and resolve issues efficiently.
+
+CANDIDATE PORTFOLIO - {name}:
+- {title} with {experience} years experience
+- Specializes in: {specialization}
+- Skills: {skills}
+- Certifications: {certifications}
+- Achievements: {achievements}
+
+**Scenario 2 - High Bill Dispute:**
+Q: "Customer claims a $500 overcharge on their statement."
 A: "I stay calm and say: 'I understand your frustration. Let me verify your account and investigate this charge immediately.' I confirm identity, review the bill, and if it's our error, I process the credit while explaining: 'You're absolutely right. I'm processing a $500 credit that will appear in 3-5 business days.'"
 
 **Scenario 3 - Complex Technical Issue:**
@@ -1677,7 +1875,10 @@ INSTRUCTIONS:
       const template = builtInTemplates[builtInName];
       
       if (template) {
-        this.loadTemplateToUI(template);
+        const resolvedTemplate = { ...template, name: builtInName };
+        localStorage.setItem('weeb-assistant-template', JSON.stringify(resolvedTemplate));
+        localStorage.setItem('weeb-assistant-template-active', templateName);
+        this.loadTemplateToUI(resolvedTemplate);
         this.showNotification(`Loaded built-in template: ${builtInName}`, 'info');
         return;
       }
@@ -1690,6 +1891,8 @@ INSTRUCTIONS:
     if (templateData) {
       try {
         const template = JSON.parse(templateData);
+        localStorage.setItem('weeb-assistant-template', JSON.stringify(template));
+        localStorage.setItem('weeb-assistant-template-active', templateName);
         this.loadTemplateToUI(template);
         this.showNotification(`Loaded template: ${templateName}`, 'info');
       } catch (e) {
@@ -1835,17 +2038,22 @@ With ${portfolio.experience} years of experience, I have developed strong skills
       const templateName = window.CURRENT_TEMPLATE.name.toLowerCase();
       
       if (templateName.includes('google ads') || templateName.includes('digital marketing')) {
-        templateSpecificBase += `GOOGLE ADS KNOWLEDGE BASE:\n`;
-        templateSpecificBase += `Q: What is CPC? A: Cost Per Click - the amount you pay when someone clicks your ad\n`;
-        templateSpecificBase += `Q: What is CTR? A: Click Through Rate - clicks divided by impressions\n`;
-        templateSpecificBase += `Q: What is Quality Score? A: Google's rating of your ad relevance and landing page quality\n`;
-        templateSpecificBase += `Q: What is Ad Rank? A: Your bid × Quality Score determines your ad position\n`;
-        templateSpecificBase += `Q: What are match types? A: Broad, Phrase, Exact - control how closely search queries must match your keywords\n`;
-        templateSpecificBase += `Q: What are negative keywords? A: Keywords you exclude to prevent irrelevant traffic\n`;
-        templateSpecificBase += `Q: What is remarketing? A: Showing ads to people who previously visited your website\n`;
-        templateSpecificBase += `Q: What is GTM? A: Google Tag Manager - tool for managing tracking codes\n`;
-        templateSpecificBase += `Q: What is ROAS? A: Return On Ad Spend - revenue generated per dollar spent\n`;
-        templateSpecificBase += `Q: What is conversion tracking? A: Measuring specific actions users take after clicking your ads\n\n`;
+        const googleAdsQa = window.GOOGLE_ADS_QA || '';
+        if (googleAdsQa) {
+          templateSpecificBase += `GOOGLE ADS Q&A:\n${googleAdsQa}\n\n`;
+        } else {
+          templateSpecificBase += `GOOGLE ADS KNOWLEDGE BASE:\n`;
+          templateSpecificBase += `Q: What is CPC? A: Cost Per Click - the amount you pay when someone clicks your ad\n`;
+          templateSpecificBase += `Q: What is CTR? A: Click Through Rate - clicks divided by impressions\n`;
+          templateSpecificBase += `Q: What is Quality Score? A: Google's rating of your ad relevance and landing page quality\n`;
+          templateSpecificBase += `Q: What is Ad Rank? A: Your bid × Quality Score determines your ad position\n`;
+          templateSpecificBase += `Q: What are match types? A: Broad, Phrase, Exact - control how closely search queries must match your keywords\n`;
+          templateSpecificBase += `Q: What are negative keywords? A: Keywords you exclude to prevent irrelevant traffic\n`;
+          templateSpecificBase += `Q: What is remarketing? A: Showing ads to people who previously visited your website\n`;
+          templateSpecificBase += `Q: What is GTM? A: Google Tag Manager - tool for managing tracking codes\n`;
+          templateSpecificBase += `Q: What is ROAS? A: Return On Ad Spend - revenue generated per dollar spent\n`;
+          templateSpecificBase += `Q: What is conversion tracking? A: Measuring specific actions users take after clicking your ads\n\n`;
+        }
       }
       
       if (templateName.includes('call center') || templateName.includes('customer service')) {
@@ -2066,6 +2274,9 @@ Return a numbered list with each question followed by a compelling sample answer
     // Store the complete template data globally for AI adaptation
     window.CURRENT_TEMPLATE = template;
     
+    if (this.elements.templateNameInput) {
+      this.elements.templateNameInput.value = template.name || '';
+    }
     if (this.elements.templateContentInput) {
       this.elements.templateContentInput.value = template.content || '';
     }
@@ -2182,11 +2393,6 @@ Return a numbered list with each question followed by a compelling sample answer
       
       this.elements.transcriptionArea.appendChild(transcriptionElement);
       this.elements.transcriptionArea.scrollTop = this.elements.transcriptionArea.scrollHeight;
-      
-      // Also update PiP if visible
-      if (this.state.pipVisible) {
-        this.updatePiPContent(data.text);
-      }
     }
   }
 
@@ -3070,99 +3276,37 @@ Return a numbered list with each question followed by a compelling sample answer
       transcriptionEntry.style.borderRadius = '4px';
       transcriptionEntry.dataset.createdAt = Date.now(); // Add timestamp for auto-deletion
       
-      // Add timestamp
-      const timestamp = new Date().toLocaleTimeString();
-      const timeElement = document.createElement('span');
-      timeElement.className = 'transcription-time';
-      timeElement.style.color = '#666';
-      timeElement.style.fontSize = '12px';
-      timeElement.style.marginRight = '8px';
-      timeElement.textContent = `[${timestamp}] `;
-      
-      // Add speaker identification if available (from diarization)
-      let speakerInfo = '';
-      let speakerNumber = null;
-      if (data && data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
-        const alternative = data.channel.alternatives[0];
-        if (alternative.words && alternative.words[0] && alternative.words[0].speaker !== undefined) {
-          const firstWord = alternative.words[0];
-          speakerNumber = firstWord.speaker + 1;
-          speakerInfo = speakerNumber === 1 ? 'INTERVIEWER: ' : `Speaker ${speakerNumber}: `;
-        }
-      }
-      
-      if (speakerInfo && speakerNumber !== null) {
-        const speakerElement = document.createElement('span');
-        speakerElement.className = 'transcription-speaker';
-        speakerElement.style.color = '#0066cc';
-        speakerElement.style.fontWeight = 'bold';
-        speakerElement.style.marginRight = '4px';
-        speakerElement.textContent = speakerInfo;
-        
-        // Add visual speaker indicator with color coding
-        const speakerIndicator = document.createElement('span');
-        speakerIndicator.className = 'speaker-indicator';
-        speakerIndicator.style.display = 'inline-block';
-        speakerIndicator.style.width = '12px';
-        speakerIndicator.style.height = '12px';
-        speakerIndicator.style.borderRadius = '50%';
-        speakerIndicator.style.marginRight = '6px';
-        speakerIndicator.style.verticalAlign = 'middle';
-        
-        // Use different colors for different speakers
-        const speakerColors = ['#0066cc', '#cc6600', '#00cc66', '#cc0066', '#6600cc'];
-        speakerIndicator.style.backgroundColor = speakerColors[(speakerNumber - 1) % speakerColors.length];
-        
-        transcriptionEntry.appendChild(speakerIndicator);
-        transcriptionEntry.appendChild(speakerElement);
-      }
+      const interviewerLabel = document.createElement('span');
+      interviewerLabel.className = 'transcription-speaker';
+      interviewerLabel.style.color = '#1d4ed8';
+      interviewerLabel.style.fontWeight = 'bold';
+      interviewerLabel.style.marginRight = '6px';
+      interviewerLabel.textContent = 'Interviewer';
       
       // Add the transcript text with confidence indicator
       const textElement = document.createElement('span');
       textElement.className = 'transcription-text';
       textElement.style.color = '#333';
       
-      // Add confidence indicator if available
-      let confidenceInfo = '';
-      if (data && data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
-        const alternative = data.channel.alternatives[0];
-        if (alternative.confidence !== undefined) {
-          const confidence = Math.round(alternative.confidence * 100);
-          confidenceInfo = ` [${confidence}%]`;
-          
-          // Apply different styling based on confidence level
-          if (confidence < 70) {
-            textElement.style.opacity = '0.7'; // Lower confidence = more transparent
-            textElement.style.fontStyle = 'italic'; // Italic for uncertain text
-          } else if (confidence < 85) {
-            textElement.style.opacity = '0.85'; // Medium confidence
-          }
-        }
-      }
+      textElement.textContent = transcript;
       
-      textElement.textContent = transcript + confidenceInfo;
-      
-      // Add word-level speaker tracking if available
-      if (data && data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
-        const alternative = data.channel.alternatives[0];
-        if (alternative.words && alternative.words.length > 0) {
-          // Create enhanced transcription with speaker changes
-          const enhancedTranscript = this.createEnhancedTranscript(alternative.words);
-          if (enhancedTranscript) {
-            textElement.innerHTML = enhancedTranscript + confidenceInfo;
-          }
-        }
-      }
-      
-      transcriptionEntry.appendChild(timeElement);
+      transcriptionEntry.appendChild(interviewerLabel);
       transcriptionEntry.appendChild(textElement);
       
       // Automatically generate answer for all transcriptions
-      if (transcript.trim().length > 5) {
+      this.state.lastTranscriptAt = Date.now();
+      const isFinalTranscript = data?.is_final ?? data?.speech_final ?? true;
+      if (transcript.trim().length > 5 && isFinalTranscript) {
         // Generate answer automatically after a short delay to avoid overwhelming the UI
         setTimeout(() => {
+          if (Date.now() - this.state.lastTranscriptAt < 1000) {
+            return;
+          }
+          if (!transcriptionEntry.isConnected) {
+            return;
+          }
           this.generateAnswer(transcript, transcriptionEntry);
-        }, 500); // Reduced delay for faster response
+        }, 1000);
       }
       
       // Optional: Add manual suggest button (can be removed or kept for manual override)
@@ -3174,15 +3318,18 @@ Return a numbered list with each question followed by a compelling sample answer
       
       // Add to transcription area
       transcriptionArea.appendChild(transcriptionEntry);
+
+      setTimeout(() => {
+        if (transcriptionEntry.isConnected) {
+          transcriptionEntry.remove();
+        }
+      }, 120000);
       
       // Auto-scroll to bottom
       // Use requestAnimationFrame to ensure the DOM has updated
       requestAnimationFrame(() => {
         transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
       });
-      
-      // Also update PIP transcription if active
-      this.updatePipTranscription(transcript);
       
       console.log('Transcription displayed successfully');
       
@@ -3272,14 +3419,18 @@ Return a numbered list with each question followed by a compelling sample answer
       <div class="ai-content">Thinking...</div>
     `;
     container.appendChild(suggestionDiv);
+
+    setTimeout(() => {
+      if (suggestionDiv.isConnected) {
+        suggestionDiv.remove();
+      }
+    }, 120000);
     
     try {
-      let prompt = `You are a helpful interview assistant. Analyze this statement: "${question}". 
-      
-      If it's a question: Provide a short, natural, confident answer under 50 words.
-      If it's a statement: Provide a relevant follow-up comment or question under 50 words.
-      
-      Keep it conversational and professional. Sound confident but humble.`;
+      let prompt = `You are responding in a casual, human tone. Analyze: "${question}".
+      If it's a question: reply briefly and naturally.
+      If it's a statement: reply with a short, friendly follow-up.
+      Hard limit: 100 characters max. No robotic phrasing.`;
 
       // Use template-specific knowledge base if available
       if (window.TEMPLATE_KNOWLEDGE_BASE) {
@@ -3309,7 +3460,7 @@ Return a numbered list with each question followed by a compelling sample answer
           - Use the portfolio information to personalize responses
           - Follow the tone and style specified in the template
           - Reference template-specific knowledge, scenarios, and expertise
-          - Keep answers concise (under 60 words) and natural (spoken English)
+          - Keep answers casual, human, and under 100 characters
           - If the template includes specific question databases, reference relevant scenarios
           - Focus on the template's default topic and specialization area
           - For Google Ads: Include metrics, strategies, and technical details when relevant
@@ -3331,26 +3482,32 @@ Return a numbered list with each question followed by a compelling sample answer
           INSTRUCTIONS:
           - If it's a question about experience/skills: Answer directly using facts from the profile.
           - If it's a general question: Answer as a Google Ads Specialist with this background.
-          - Keep answers concise (under 60 words) and natural (spoken English).
+          - Keep answers casual, human, and under 100 characters.
           - Do not invent facts not in the profile.
           - If the information is not in the profile, answer generally based on Google Ads best practices but mention your specific experience (e.g., "In my experience with US clients...").
         `;
       }
       
       const answer = await this.callAI(prompt);
+      const normalizedAnswer = answer.replace(/\s+/g, ' ').trim();
+      const limitedAnswer = normalizedAnswer.length > 100
+        ? normalizedAnswer.slice(0, 100).trim()
+        : normalizedAnswer;
       
       suggestionDiv.classList.remove('loading');
-      suggestionDiv.querySelector('.ai-content').textContent = answer;
+      suggestionDiv.querySelector('.ai-content').textContent = limitedAnswer;
+
+      this.addAIChat(limitedAnswer, 'ai');
       
       // Update PIP with the AI answer
-      this.updatePipAI(answer);
+      this.updatePipAI(limitedAnswer);
       
       // Add copy button
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn';
       copyBtn.textContent = 'Copy';
       copyBtn.onclick = () => {
-        navigator.clipboard.writeText(answer);
+        navigator.clipboard.writeText(limitedAnswer);
         copyBtn.textContent = 'Copied!';
         setTimeout(() => copyBtn.textContent = 'Copy', 2000);
       };
@@ -3527,6 +3684,23 @@ Return a numbered list with each question followed by a compelling sample answer
       this.elements.stopShareBtn.disabled = !this.state.isSharingScreen;
     }
 
+    const video = this.elements.screenShareVideo;
+    const placeholder = this.elements.screenSharePlaceholder;
+    if (video) {
+      if (this.state.isSharingScreen && this.state.screenShareStream) {
+        if (video.srcObject !== this.state.screenShareStream) {
+          video.srcObject = this.state.screenShareStream;
+        }
+        video.style.display = 'block';
+      } else {
+        video.srcObject = null;
+        video.style.display = 'none';
+      }
+    }
+    if (placeholder) {
+      placeholder.style.display = this.state.isSharingScreen ? 'none' : 'flex';
+    }
+
     // Update main display
     const mainDisplay = this.elements.screenShareMain;
     if (mainDisplay) {
@@ -3585,12 +3759,21 @@ Return ONLY a numbered list of {num_questions} questions. Do not include introdu
     const context = this.elements.interviewerTranscription?.textContent || '';
     const topic = templateConfig.defaultTopic || 'Google Ads';
     const numQuestions = templateConfig.numQuestions || 5;
+    const portfolio = templateConfig.portfolio || {};
     
     // Replace template variables with actual values
     const prompt = templateConfig.content
       .replace(/\{context\}/g, context.substring(0, 500))
       .replace(/\{topic\}/g, topic)
-      .replace(/\{num_questions\}/g, numQuestions);
+      .replace(/\{num_questions\}/g, numQuestions)
+      .replace(/\{name\}/g, portfolio.name || 'Candidate')
+      .replace(/\{title\}/g, portfolio.title || 'Professional')
+      .replace(/\{experience\}/g, portfolio.experience || '2+')
+      .replace(/\{budget\}/g, portfolio.budget || '')
+      .replace(/\{specialization\}/g, portfolio.specialization || '')
+      .replace(/\{certifications\}/g, portfolio.certifications || '')
+      .replace(/\{achievements\}/g, portfolio.achievements || '')
+      .replace(/\{skills\}/g, portfolio.skills || '');
 
     try {
       const response = await this.callAI(prompt);
@@ -3646,9 +3829,15 @@ Return ONLY a numbered list of {num_questions} questions. Do not include introdu
 
     transcriptionArea.appendChild(entry);
     transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
+
+    setTimeout(() => {
+      if (entry.isConnected) {
+        entry.remove();
+      }
+    }, 120000);
+
+    this.addInterviewerChat(questionText, 'ai');
     
-    // Also update PIP
-    this.updatePipTranscription(`[AI Interviewer]: ${questionText}`);
   }
 
   handleQuestionGenerated(data) {
@@ -3656,20 +3845,33 @@ Return ONLY a numbered list of {num_questions} questions. Do not include introdu
     this.state.questions = data.questions;
     this.updateQuestionsUI();
     this.showNotification('Smart questions generated', 'success');
+    if (this.questionClearTimeout) {
+      clearTimeout(this.questionClearTimeout);
+    }
+    this.questionClearTimeout = setTimeout(() => {
+      this.state.questions = [];
+      this.updateQuestionsUI();
+    }, 120000);
   }
 
   updateQuestionsUI() {
     if (this.elements.questionsList) {
       if (this.state.questions.length === 0) {
-        this.elements.questionsList.innerHTML = '<div class="question-placeholder">Click "Generate Smart Questions" to create interview questions</div>';
+        this.elements.questionsList.innerHTML = '<div class="question-placeholder">No questions yet. Click "Generate Questions" to create a list.</div>';
       } else {
-        this.elements.questionsList.innerHTML = this.state.questions.map((q, index) => `
-          <div class="question-item">
-            <div class="question-number">${index + 1}.</div>
-            <div class="question-text">${q.text}</div>
-            <div class="question-category">${q.category}</div>
-          </div>
-        `).join('');
+        this.elements.questionsList.innerHTML = this.state.questions.map((q, index) => {
+          const displayIndex = String(index + 1).padStart(2, '0');
+          const category = q.category || 'General';
+          return `
+            <div class="question-item" data-index="${index}">
+              <div class="question-header">
+                <div class="question-number">${displayIndex}</div>
+                <div class="question-category">${category}</div>
+              </div>
+              <div class="question-text">${q.text}</div>
+            </div>
+          `;
+        }).join('');
       }
     }
   }
@@ -3743,8 +3945,43 @@ Return ONLY a numbered list of {num_questions} questions. Do not include introdu
   }
 
   handleAIResponse(data) {
-    this.updatePiPContent(data.response);
+    this.updatePipAI(data.response);
     this.showNotification('AI response received', 'info');
+  }
+
+  togglePipMinimize() {
+    if (!this.elements.pipOverlay) return;
+    if (!this.pipState.normalBounds) {
+      this.pipState.normalBounds = this.getPipBounds();
+    }
+    if (this.pipState.isMinimized) {
+      this.pipState.isMinimized = false;
+      this.elements.pipOverlay.classList.remove('pip-minimized');
+      this.applyPipBounds(this.pipState.normalBounds);
+      return;
+    }
+    this.pipState.isMinimized = true;
+    this.pipState.isMaximized = false;
+    this.elements.pipOverlay.classList.remove('pip-maximized');
+    this.elements.pipOverlay.classList.add('pip-minimized');
+  }
+
+  togglePipMaximize() {
+    if (!this.elements.pipOverlay) return;
+    if (!this.pipState.normalBounds) {
+      this.pipState.normalBounds = this.getPipBounds();
+    }
+    if (this.pipState.isMaximized) {
+      this.pipState.isMaximized = false;
+      this.elements.pipOverlay.classList.remove('pip-maximized');
+      this.applyPipBounds(this.pipState.normalBounds);
+      return;
+    }
+    this.pipState.isMaximized = true;
+    this.pipState.isMinimized = false;
+    this.elements.pipOverlay.classList.remove('pip-minimized');
+    this.elements.pipOverlay.classList.add('pip-maximized');
+    this.applyPipBounds(this.getPipMaxBounds());
   }
 
   togglePiP() {
@@ -3759,6 +3996,13 @@ Return ONLY a numbered list of {num_questions} questions. Do not include introdu
     if (this.elements.pipOverlay) {
       this.elements.pipOverlay.classList.remove('hidden');
       this.state.pipVisible = true;
+      if (this.pipState.isMinimized) {
+        this.elements.pipOverlay.classList.add('pip-minimized');
+      }
+      if (this.pipState.isMaximized) {
+        this.elements.pipOverlay.classList.add('pip-maximized');
+        this.applyPipBounds(this.getPipMaxBounds());
+      }
       this.announceToScreenReader('Picture-in-Picture overlay opened');
     }
   }
@@ -3857,6 +4101,10 @@ Return ONLY a numbered list of {num_questions} questions. Do not include introdu
   handleResize() {
     // Adjust PiP position if it's outside viewport
     if (this.elements.pipOverlay && this.state.pipVisible) {
+      if (this.pipState.isMaximized) {
+        this.applyPipBounds(this.getPipMaxBounds());
+        return;
+      }
       const rect = this.elements.pipOverlay.getBoundingClientRect();
       const maxX = window.innerWidth - rect.width;
       const maxY = window.innerHeight - rect.height;

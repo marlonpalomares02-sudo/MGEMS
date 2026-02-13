@@ -4,7 +4,7 @@
 }
 
 body {
-    font-family: sans-serif;
+    font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     background-color: #f0f0f0;
@@ -117,16 +117,163 @@ body {
 
 main {
     padding: 2rem;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
 }
 
 section {
     background: white;
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+section h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+}
+
+.screen-share-note {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#meeting-status {
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+#screen-recording {
+    min-height: 320px;
+}
+
+.screen-recording-frame {
+    position: relative;
+    width: 100%;
+    min-height: 260px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #0f172a;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#screen-share-video {
+    width: 100%;
+    height: 100%;
+    max-height: 420px;
+    object-fit: cover;
+    display: none;
+}
+
+.screen-recording-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: center;
+    justify-content: center;
+    color: #e2e8f0;
+    text-align: center;
+    padding: 1.5rem;
+    background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), rgba(15, 23, 42, 0.95));
+}
+
+.screen-recording-placeholder .placeholder-icon {
+    font-size: 1.75rem;
+}
+
+.screen-recording-placeholder .placeholder-subtitle {
+    color: #cbd5f5;
+    font-size: 0.9rem;
+}
+
+.chat-placeholder {
+    padding: 1rem;
+    color: #6b7280;
+    font-size: 0.95rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px dashed #d0d7e2;
+}
+
+.chat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.chat-item .chat-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+}
+
+.chat-item .chat-text {
+    font-size: 0.98rem;
+    color: #1f2937;
+    line-height: 1.5;
+}
+
+.chat-item.interviewer {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.chat-item.interviewer .chat-meta {
+    color: #1d4ed8;
+}
+
+.chat-item.ai {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.chat-item.ai .chat-meta {
+    color: #166534;
+}
+
+.chat-item.system {
+    border-color: #e5e7eb;
+    background: #f9fafb;
+}
+
+#questions-area button {
+    margin-top: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 #interviewer-transcription {
@@ -220,6 +367,12 @@ section {
     margin: 0;
     color: #495057;
     line-height: 1.5;
+}
+
+.template-hint-note {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: #6c757d;
 }
 
 .template-hints {
@@ -488,12 +641,12 @@ section {
     right: 20px;
     width: 380px;
     height: 280px;
-    background: white;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
     border-radius: 12px;
     overflow: hidden;
     z-index: 500;
-    border: 2px solid #4da6ff;
+    border: 1px solid rgba(59, 130, 246, 0.45);
     resize: both;
     min-width: 320px;
     min-height: 220px;
@@ -501,15 +654,56 @@ section {
     max-height: 550px;
 }
 
+#pip-overlay.pip-minimized {
+    height: 42px;
+    min-height: 42px;
+    max-height: 42px;
+}
+
+#pip-overlay.pip-minimized #pip-content {
+    display: none;
+}
+
+#pip-overlay.pip-minimized .resize-handle,
+#pip-overlay.pip-minimized .resize-indicator {
+    display: none;
+}
+
 .pip-header {
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: white;
-    padding: 6px 8px;
+    padding: 8px 10px;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
     align-items: center;
     border-bottom: 1px solid #4a5568;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.pip-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.pip-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.pip-title-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #22c55e;
+    display: inline-block;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
 }
 
 .pip-header button {
@@ -517,7 +711,7 @@ section {
     border: 1px solid rgba(255,255,255,0.2);
     color: white;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 5px 9px;
     margin-left: 4px;
     border-radius: 4px;
     font-size: 12px;
@@ -533,10 +727,10 @@ section {
 
 /* PIP Content Layout */
 #pip-content {
-    height: calc(100% - 30px);
+    height: calc(100% - 36px);
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    padding: 12px;
     overflow-y: auto;
     overflow-x: hidden;
     gap: 12px;
@@ -565,26 +759,35 @@ section {
 .pip-transcription-container {
     flex: 1;
     overflow-y: auto;
-    padding: 12px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    padding: 12px 14px 14px;
+    background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%);
     border-radius: 10px;
-    border: 1px solid #d0d0d0;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    min-height: 90px;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.12);
+    min-height: 110px;
+}
+
+.pip-section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
 }
 
 .pip-transcription-text {
     font-size: 15px;
-    line-height: 1.6;
-    color: #2d3748;
+    line-height: 1.65;
+    color: #0b1324;
     overflow-y: auto;
-    max-height: 130px;
-    padding-right: 25px;
+    max-height: 170px;
+    padding-right: 10px;
     position: relative;
     scroll-behavior: smooth;
-    font-weight: 500;
+    font-weight: 700;
     word-wrap: break-word;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.1px;
     text-align: left;
 }
 
@@ -606,25 +809,26 @@ section {
 }
 
 .pip-ai-container {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border: 2px solid #4da6ff;
+    flex: 1;
+    background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
+    border: 1px solid rgba(59, 130, 246, 0.45);
     border-radius: 10px;
-    padding: 12px;
-    min-height: 90px;
-    max-height: 150px;
+    padding: 12px 14px 14px;
+    min-height: 92px;
+    max-height: none;
     overflow: hidden;
-    box-shadow: 0 2px 6px rgba(77, 166, 255, 0.2);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
 }
 
 .pip-ai-header {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
-    color: #2563eb;
+    color: #1d4ed8;
     margin-bottom: 8px;
     display: flex;
     align-items: center;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    letter-spacing: 0.3px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .pip-ai-header::before {
@@ -636,15 +840,15 @@ section {
 .pip-ai-content {
     font-size: 14px;
     line-height: 1.6;
-    color: #1e40af;
+    color: #0f172a;
     overflow-y: auto;
-    max-height: 110px;
-    padding-right: 25px;
+    max-height: none;
+    padding-right: 10px;
     position: relative;
     scroll-behavior: smooth;
-    font-weight: 500;
+    font-weight: 700;
     word-wrap: break-word;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.1px;
     text-align: left;
 }
 

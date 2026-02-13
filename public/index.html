@@ -37,37 +37,54 @@
     <main id="main-content">
         <div id="meeting-status">Ready</div>
 
-        <section id="screen-share-main">
-            <h2>Screen Share</h2>
-            <div id="screen-thumbnails"></div>
-            <button id="share-screen-btn">Share Screen</button>
-            <button id="stop-share-btn" disabled>Stop Sharing</button>
-        </section>
+        <div class="main-grid">
+            <div class="main-column left-column">
+                <section id="screen-share-main">
+                    <h2>Screen Share</h2>
+                    <p class="screen-share-note">Ask participants to share the meeting window/tab, not their full screen.</p>
+                    <div id="screen-thumbnails"></div>
+                    <button id="share-screen-btn">Share Screen</button>
+                    <button id="stop-share-btn" disabled>Stop Sharing</button>
+                </section>
 
-        <section id="interviewer-transcription">
-            <h2>Transcription</h2>
-            <div id="transcription-status"></div>
-            <div class="controls">
-                <button id="start-transcription-btn">Start</button>
-                <button id="stop-transcription-btn" disabled>Stop</button>
-                <button id="clear-transcription-btn">Clear</button>
+                <section id="interviewer-transcription">
+                    <h2>Transcription</h2>
+                    <div id="transcription-status"></div>
+                    <div class="controls">
+                        <button id="start-transcription-btn">Start</button>
+                        <button id="stop-transcription-btn" disabled>Stop</button>
+                        <button id="clear-transcription-btn">Clear</button>
+                    </div>
+                </section>
             </div>
-        </section>
 
-        <section id="questions-area">
-            <h2>Questions</h2>
-            <div id="questions-list"></div>
-            <button id="generate-questions-btn">Generate Questions</button>
-        </section>
+            <div class="main-column right-column">
+                <section id="screen-recording">
+                    <h2>Live Screen Recording</h2>
+                    <div class="screen-recording-frame">
+                        <video id="screen-share-video" autoplay muted playsinline></video>
+                        <div id="screen-share-placeholder" class="screen-recording-placeholder">
+                            <div class="placeholder-icon" aria-hidden="true">🖥️</div>
+                            <p>No screen shared</p>
+                            <p class="placeholder-subtitle">Click "Share Screen" to start sharing</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="questions-area">
+                    <h2>Questions</h2>
+                    <div id="questions-list"></div>
+                    <button id="generate-questions-btn">Generate Questions</button>
+                </section>
+            </div>
+        </div>
     </main>
-
-</div>
 
     <div id="knowledge-base-panel" class="hidden">
         <div class="panel-content">
             <h2>Knowledge Base Template Editor</h2>
             <div class="template-info">
-                <p>Customize the template used for generating interview questions. This template will be used when you click "Generate Questions".</p>
+                <p>Customize the template used for generating interview questions and AI answers. The saved template becomes your active prompt and feeds the PIP suggestions.</p>
             </div>
             <form id="knowledge-base-form">
                 <!-- Template Management Section -->
@@ -163,6 +180,7 @@
                             <li><code>{achievements}</code> - Key achievements</li>
                             <li><code>{skills}</code> - Core skills</li>
                         </ul>
+                        <p class="template-hint-note">Tip: keep the prompt short, focused, and specific to the role.</p>
                     </div>
                 </div>
                 
@@ -238,14 +256,17 @@
 
     <div id="pip-overlay" class="hidden">
         <div class="pip-header">
-            <button id="pip-toggle-btn">_</button>
-            <button id="pip-resize-btn">[]</button>
-            <button id="pip-close-btn">X</button>
+            <div class="pip-title">
+                <span class="pip-title-icon">●</span>
+                <span>Live Coach</span>
+            </div>
+            <div class="pip-controls">
+                <button id="pip-toggle-btn">_</button>
+                <button id="pip-resize-btn">[]</button>
+                <button id="pip-close-btn">X</button>
+            </div>
         </div>
         <div id="pip-content">
-            <div class="pip-transcription-container">
-                <div class="pip-transcription-text"></div>
-            </div>
             <div class="pip-ai-container">
                 <div class="pip-ai-header">AI Assistant</div>
                 <div class="pip-ai-content"></div>
